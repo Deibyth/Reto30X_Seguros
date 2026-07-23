@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+*.egg
+.venv/
+venv/
+.pytest_cache/
+.coverage
+*.egg-info/
+
+# Node
+node_modules/
+frontend/dist/
+frontend/build/
+*.tsbuildinfo
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.*.sw?
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment — NUNCA commits .env con keys reales
+.env
+.env.local
+*.env
+
+# Lock / temp files
+.~lock.*#
+
+# Database — SQLite local
+*.db
+backend/data/*.db
+
+# Docker
+.docker/
+
+# Secrets / keys (manual cleanup)
+apikey_llm.txt
