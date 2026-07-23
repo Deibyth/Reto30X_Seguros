@@ -1,0 +1,668 @@
+{
+  "project": {
+    "name": "ProteccionInteligente360",
+    "state": "new",
+    "teamSize": "indie",
+    "structure": "monorepo",
+    "language": "Spanish"
+  },
+  "stack": null,
+  "knowledge": {
+    "hasScan": false,
+    "hasInventory": false,
+    "hasContextPack": true,
+    "hasUnderstand": true,
+    "hasBusiness": false,
+    "hasProduct": false,
+    "hasCapabilities": false,
+    "hasArchitecture": true,
+    "hasRoadmap": true,
+    "hasAgents": false,
+    "hasSkills": false
+  },
+  "workItems": {
+    "total": 6,
+    "inProgress": 0,
+    "done": 0,
+    "cancelled": 0,
+    "byState": {
+      "draft": 6,
+      "ready": 0,
+      "in-progress": 0,
+      "blocked": 0,
+      "completed": 0,
+      "archived": 0
+    },
+    "byType": {
+      "feature": 6
+    },
+    "initiatives": [
+      {
+        "name": "Hackathon MVP",
+        "states": {
+          "draft": 6,
+          "ready": 0,
+          "in-progress": 0,
+          "blocked": 0,
+          "completed": 0,
+          "archived": 0
+        }
+      }
+    ],
+    "items": [
+      {
+        "id": "WI-001",
+        "title": "Fundación de la plataforma — Repositorio, backend, frontend e infraestructura base",
+        "type": "feature",
+        "status": "draft",
+        "lifecycle": "draft",
+        "initiative": "Hackathon MVP",
+        "knowledgeLevel": "K2",
+        "hasOwnership": false,
+        "domains": [
+          "shared"
+        ],
+        "source": {
+          "type": "manual",
+          "inferred": false
+        }
+      },
+      {
+        "id": "WI-002",
+        "title": "Núcleo conversacional — Router, Conversation Hub, Chat UI y agentes de crédito y seguros",
+        "type": "feature",
+        "status": "draft",
+        "lifecycle": "draft",
+        "initiative": "Hackathon MVP",
+        "knowledgeLevel": "K2",
+        "hasOwnership": false,
+        "domains": [
+          "shared",
+          "credits",
+          "insurance"
+        ],
+        "source": {
+          "type": "manual",
+          "inferred": false
+        }
+      },
+      {
+        "id": "WI-003",
+        "title": "Herramientas backend — Customer, Credit, Insurance, Document, Notification Tools vía FastMCP",
+        "type": "feature",
+        "status": "draft",
+        "lifecycle": "draft",
+        "initiative": "Hackathon MVP",
+        "knowledgeLevel": "K2",
+        "hasOwnership": false,
+        "domains": [
+          "customers",
+          "credits",
+          "insurance",
+          "documents",
+          "notifications"
+        ],
+        "source": {
+          "type": "manual",
+          "inferred": false
+        }
+      },
+      {
+        "id": "WI-004",
+        "title": "Form Engine — Eliminación del PDF, conversión de formularios oficiales a JSON estructurado",
+        "type": "feature",
+        "status": "draft",
+        "lifecycle": "draft",
+        "initiative": "Hackathon MVP",
+        "knowledgeLevel": "K2",
+        "hasOwnership": false,
+        "domains": [
+          "shared",
+          "credits",
+          "insurance"
+        ],
+        "source": {
+          "type": "manual",
+          "inferred": false
+        }
+      },
+      {
+        "id": "WI-005",
+        "title": "Opportunity Engine — Motor de reglas proactivo con scheduler, elegibilidad y campañas WhatsApp",
+        "type": "feature",
+        "status": "draft",
+        "lifecycle": "draft",
+        "initiative": "Hackathon MVP",
+        "knowledgeLevel": "K2",
+        "hasOwnership": false,
+        "domains": [
+          "opportunities",
+          "notifications",
+          "customers"
+        ],
+        "source": {
+          "type": "manual",
+          "inferred": false
+        }
+      },
+      {
+        "id": "WI-006",
+        "title": "Demo final — Flujo completo integrado, pruebas y despliegue",
+        "type": "feature",
+        "status": "draft",
+        "lifecycle": "draft",
+        "initiative": "Hackathon MVP",
+        "knowledgeLevel": "K2",
+        "hasOwnership": false,
+        "domains": [
+          "shared"
+        ],
+        "source": {
+          "type": "manual",
+          "inferred": false
+        }
+      }
+    ]
+  },
+  "ownership": {
+    "workItemsTotal": 6,
+    "workItemsWithOwnership": 0,
+    "workItemsMissingOwnership": 6
+  },
+  "domains": [
+    "shared",
+    "credits",
+    "insurance",
+    "customers",
+    "documents",
+    "notifications",
+    "opportunities"
+  ],
+  "duplicateWorkItems": [],
+  "externalCapsules": [],
+  "graph": {
+    "generatedAt": "2026-07-16T18:24:28.781Z",
+    "scope": "all",
+    "scopeReason": "All supported Work Item statuses are included.",
+    "includedStatuses": [
+      "draft",
+      "ready",
+      "in-progress",
+      "blocked",
+      "completed"
+    ],
+    "excludedStatuses": [
+      "archived"
+    ],
+    "nodes": 8,
+    "edges": 6,
+    "activeWorkItemsConnectedToCode": 0
+  },
+  "graphHints": {
+    "scope": "all",
+    "scopeReason": "All supported Work Item statuses are included.",
+    "quality": "partial",
+    "totalHints": 6,
+    "activeWorkItemHints": 6,
+    "messages": [
+      "WI-001 has no code ownership, linked capability, linked decision.",
+      "WI-002 has no code ownership, linked capability, linked decision.",
+      "WI-003 has no code ownership, linked capability, linked decision.",
+      "WI-004 has no code ownership, linked capability, linked decision.",
+      "WI-005 has no code ownership, linked capability, linked decision.",
+      "WI-006 has no code ownership, linked capability, linked decision."
+    ]
+  },
+  "skills": {
+    "total": 0,
+    "byGroup": {}
+  },
+  "layers": [
+    {
+      "layer": "Business",
+      "status": "Missing",
+      "detected": []
+    },
+    {
+      "layer": "Product",
+      "status": "Missing",
+      "detected": []
+    },
+    {
+      "layer": "Tech",
+      "status": "Structured",
+      "detected": [
+        "knowledge.md",
+        "stack.md"
+      ]
+    },
+    {
+      "layer": "Delivery",
+      "status": "Traceable",
+      "detected": [
+        "WI-001-fundacion-plataforma.md",
+        "WI-002-nucleo-conversacional.md",
+        "WI-003-herramientas-backend.md",
+        "WI-004-form-engine.md",
+        "WI-005-oportunity-engine-proactivo.md",
+        "WI-006-demo-final.md",
+        "roadmap.md"
+      ]
+    }
+  ],
+  "roadmap": {
+    "present": true,
+    "initiatives": 0,
+    "work_item_candidates": 0,
+    "materialized_work_items": 6,
+    "remaining_work_item_candidates": 0,
+    "candidates": 0,
+    "materialized": 6,
+    "remaining": 0
+  },
+  "missingKnowledge": [
+    "Scan baseline (.kaddo/scan.json)",
+    "Inventory (knowledge/inventory.md)",
+    "Product knowledge (knowledge/product/)",
+    "Agents (knowledge/agents/)"
+  ],
+  "suggestedNextSteps": [
+    "Run `kaddo bootstrap` to create the project knowledge baseline.",
+    "Then run `kaddo add agents`.",
+    "Then run `kaddo add skills`.",
+    "Then run `kaddo context`.",
+    "Then run `kaddo understand`."
+  ],
+  "readiness": {
+    "project_name": "ProteccionInteligente360",
+    "project_type": "new",
+    "overall": "not-applicable",
+    "signals": {
+      "scan": "missing",
+      "understand": "missing",
+      "bootstrap_baseline": "incomplete",
+      "agents": "missing",
+      "skills": "missing",
+      "current_state": "missing",
+      "codebase": "missing",
+      "capabilities": "missing",
+      "product": "missing",
+      "business": "missing",
+      "roadmap": "missing",
+      "work_items": "none",
+      "adapters": [],
+      "blocking_open_questions": 0,
+      "assumed_questions": 0,
+      "resolved_questions": 0,
+      "deferred_questions": 0
+    },
+    "recommended_next_step": {
+      "label": "This project uses the standard new-project Kaddo flow."
+    },
+    "nextStepRecommendation": {
+      "id": "bootstrap",
+      "phase": "Setup",
+      "label": "Run `kaddo bootstrap` to create the project knowledge baseline.",
+      "command": "kaddo bootstrap",
+      "reason": "The knowledge baseline is incomplete."
+    }
+  },
+  "nextStepRecommendation": {
+    "id": "bootstrap",
+    "phase": "Setup",
+    "label": "Run `kaddo bootstrap` to create the project knowledge baseline.",
+    "command": "kaddo bootstrap",
+    "reason": "The knowledge baseline is incomplete."
+  },
+  "techDecisions": {
+    "status": "none",
+    "candidates": 0,
+    "adrs": 0,
+    "draft_adrs": 0,
+    "accepted_adrs": 0,
+    "candidate_list": [],
+    "candidates_source": null,
+    "candidates_legacy_location": false,
+    "candidates_both_exist": false
+  },
+  "techKnowledge": {
+    "core": {
+      "currentState": false,
+      "codebase": false
+    },
+    "discovery": {
+      "architectureNotes": false,
+      "decisionCandidates": false,
+      "legacyLocation": false
+    }
+  },
+  "installedAssets": {
+    "version": "3.60.0",
+    "agents": {
+      "total": 19,
+      "up_to_date": 0,
+      "outdated": 0,
+      "missing": 19,
+      "unknown_version": 0,
+      "modified": 0,
+      "items": [
+        {
+          "name": "capability-agent",
+          "path": "knowledge/agents/product/capability-agent.md",
+          "available": "3.60.0",
+          "installed": null,
+          "state": "missing"
+        },
+        {
+          "name": "architecture-agent",
+          "path": "knowledge/agents/tech/architecture-agent.md",
+          "available": "3.60.0",
+          "installed": null,
+          "state": "missing"
+        },
+        {
+          "name": "roadmap-agent",
+          "path": "knowledge/agents/delivery/roadmap-agent.md",
+          "available": "3.60.0",
+          "installed": null,
+          "state": "missing"
+        },
+        {
+          "name": "legacy-agent",
+          "path": "knowledge/agents/utilities/legacy-agent.md",
+          "available": "3.60.0",
+          "installed": null,
+          "state": "missing"
+        },
+        {
+          "name": "adr-agent",
+          "path": "knowledge/agents/tech/adr-agent.md",
+          "available": "3.60.0",
+          "installed": null,
+          "state": "missing"
+        },
+        {
+          "name": "work-item-agent",
+          "path": "knowledge/agents/delivery/work-item-agent.md",
+          "available": "3.60.0",
+          "installed": null,
+          "state": "missing"
+        },
+        {
+          "name": "git-strategy-agent",
+          "path": "knowledge/agents/delivery/git-strategy-agent.md",
+          "available": "3.60.0",
+          "installed": null,
+          "state": "missing"
+        },
+        {
+          "name": "security-agent",
+          "path": "knowledge/agents/tech/security-agent.md",
+          "available": "3.60.0",
+          "installed": null,
+          "state": "missing"
+        },
+        {
+          "name": "standards-agent",
+          "path": "knowledge/agents/tech/standards-agent.md",
+          "available": "3.60.0",
+          "installed": null,
+          "state": "missing"
+        },
+        {
+          "name": "stack-agent",
+          "path": "knowledge/agents/tech/stack-agent.md",
+          "available": "3.60.0",
+          "installed": null,
+          "state": "missing"
+        },
+        {
+          "name": "module-design-agent",
+          "path": "knowledge/agents/tech/module-design-agent.md",
+          "available": "3.60.0",
+          "installed": null,
+          "state": "missing"
+        },
+        {
+          "name": "business-agent",
+          "path": "knowledge/agents/business/business-agent.md",
+          "available": "3.60.0",
+          "installed": null,
+          "state": "missing"
+        },
+        {
+          "name": "bootstrap-agent",
+          "path": "knowledge/agents/product/bootstrap-agent.md",
+          "available": "3.60.0",
+          "installed": null,
+          "state": "missing"
+        },
+        {
+          "name": "codebase-agent",
+          "path": "knowledge/agents/tech/codebase-agent.md",
+          "available": "3.60.0",
+          "installed": null,
+          "state": "missing"
+        },
+        {
+          "name": "implementation-agent",
+          "path": "knowledge/agents/delivery/implementation-agent.md",
+          "available": "3.60.0",
+          "installed": null,
+          "state": "missing"
+        },
+        {
+          "name": "backlog-agent",
+          "path": "knowledge/agents/delivery/backlog-agent.md",
+          "available": "3.60.0",
+          "installed": null,
+          "state": "missing"
+        },
+        {
+          "name": "ownership-agent",
+          "path": "knowledge/agents/delivery/ownership-agent.md",
+          "available": "3.60.0",
+          "installed": null,
+          "state": "missing"
+        },
+        {
+          "name": "capsule-agent",
+          "path": "knowledge/agents/tech/capsule-agent.md",
+          "available": "3.60.0",
+          "installed": null,
+          "state": "missing"
+        },
+        {
+          "name": "graph-agent",
+          "path": "knowledge/agents/tech/graph-agent.md",
+          "available": "3.60.0",
+          "installed": null,
+          "state": "missing"
+        }
+      ]
+    },
+    "skills": {
+      "total": 7,
+      "up_to_date": 0,
+      "outdated": 0,
+      "missing": 7,
+      "unknown_version": 0,
+      "modified": 0,
+      "items": [
+        {
+          "name": "adr-writing",
+          "path": "knowledge/skills/adr-writing/skill.md",
+          "available": "3.60.0",
+          "installed": null,
+          "state": "missing"
+        },
+        {
+          "name": "work-item-refinement",
+          "path": "knowledge/skills/work-item-refinement/skill.md",
+          "available": "3.60.0",
+          "installed": null,
+          "state": "missing"
+        },
+        {
+          "name": "ownership-suggestion",
+          "path": "knowledge/skills/ownership-suggestion/skill.md",
+          "available": "3.60.0",
+          "installed": null,
+          "state": "missing"
+        },
+        {
+          "name": "graph-metadata-review",
+          "path": "knowledge/skills/graph-metadata-review/skill.md",
+          "available": "3.60.0",
+          "installed": null,
+          "state": "missing"
+        },
+        {
+          "name": "capsule-writing",
+          "path": "knowledge/skills/capsule-writing/skill.md",
+          "available": "3.60.0",
+          "installed": null,
+          "state": "missing"
+        },
+        {
+          "name": "learning-capture",
+          "path": "knowledge/skills/learning-capture/skill.md",
+          "available": "3.60.0",
+          "installed": null,
+          "state": "missing"
+        },
+        {
+          "name": "implementation-planning",
+          "path": "knowledge/skills/implementation-planning/skill.md",
+          "available": "3.60.0",
+          "installed": null,
+          "state": "missing"
+        }
+      ]
+    }
+  },
+  "roadmapQuality": {
+    "initiatives": {
+      "total": 0,
+      "grounded": 0,
+      "with_related_domain": 0,
+      "with_related_capability": 0,
+      "with_source_signals": 0,
+      "needs_refinement": false,
+      "items": []
+    },
+    "work_item_candidates": {
+      "total": 0,
+      "with_source_initiative": 0,
+      "with_related_domain": 0,
+      "with_related_capability": 0
+    }
+  },
+  "projectRoute": {
+    "type": "new",
+    "currentStep": "refine-work-item",
+    "completed": 3,
+    "total": 12,
+    "progressPercent": 25,
+    "steps": [
+      {
+        "id": "enable-kaddo",
+        "label": "Enable Kaddo",
+        "status": "done",
+        "evidence": [
+          ".kaddo/config.yml"
+        ]
+      },
+      {
+        "id": "define-business",
+        "label": "Define business context",
+        "status": "pending",
+        "agent": "business-agent"
+      },
+      {
+        "id": "define-product",
+        "label": "Define product context",
+        "status": "pending",
+        "agent": "capability-agent"
+      },
+      {
+        "id": "discover-capabilities",
+        "label": "Define initial capabilities",
+        "status": "pending",
+        "agent": "capability-agent"
+      },
+      {
+        "id": "describe-architecture",
+        "label": "Define initial architecture",
+        "status": "pending",
+        "agent": "architecture-agent"
+      },
+      {
+        "id": "create-work-source",
+        "label": "Create initial work source",
+        "status": "done",
+        "evidence": [
+          "knowledge/delivery/roadmap.md"
+        ]
+      },
+      {
+        "id": "materialize-work-item",
+        "label": "Create first Work Item",
+        "status": "done",
+        "evidence": [
+          "knowledge/delivery/work-items/"
+        ]
+      },
+      {
+        "id": "refine-work-item",
+        "label": "Refine Work Item",
+        "status": "current",
+        "reason": "There are 6 draft Work Items and no Work Item is ready.",
+        "agent": "work-item-agent",
+        "skill": "work-item-refinement"
+      },
+      {
+        "id": "suggest-ownership",
+        "label": "Suggest ownership",
+        "status": "next",
+        "reason": "Ownership coverage is 0/6.",
+        "command": "kaddo owners suggest"
+      },
+      {
+        "id": "prepare-implementation",
+        "label": "Prepare implementation",
+        "status": "next"
+      },
+      {
+        "id": "run-guard",
+        "label": "Run guard",
+        "status": "pending"
+      },
+      {
+        "id": "capture-learning",
+        "label": "Capture learning",
+        "status": "pending"
+      }
+    ]
+  },
+  "scanSignals": null,
+  "metadataHealth": {
+    "findings": [
+      {
+        "file": "knowledge/delivery/roadmap.md",
+        "field": "generated_by",
+        "issue": "missing",
+        "detail": "Missing `generated_by` in frontmatter."
+      },
+      {
+        "file": "knowledge/delivery/roadmap.md",
+        "field": "template_version",
+        "issue": "missing",
+        "detail": "Missing `template_version` in frontmatter."
+      }
+    ],
+    "healthy": 0,
+    "drifted": 1
+  },
+  "mapped_modules": []
+}

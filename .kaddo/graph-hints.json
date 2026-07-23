@@ -1,0 +1,168 @@
+{
+  "generated_at": "2026-07-23T01:19:45.502Z",
+  "scope": "all",
+  "scope_reason": "All supported Work Item statuses are included.",
+  "quality": "partial",
+  "summary": {
+    "nodes": 8,
+    "edges": 6,
+    "hints": 6
+  },
+  "metrics": {
+    "nodes_count": 8,
+    "edges_count": 6,
+    "connected_nodes_count": 7,
+    "isolated_nodes_count": 1,
+    "active_work_items_without_code": 6,
+    "active_work_items_without_capabilities": 6,
+    "work_items_without_source": 0,
+    "adrs_without_code": 0,
+    "capsules_without_related_work_items": 0
+  },
+  "hints": [
+    {
+      "artifact_id": "WI-001",
+      "artifact_type": "work-item",
+      "path": "knowledge/delivery/work-items/draft/WI-001-fundacion-plataforma.md",
+      "severity": "info",
+      "missing": [
+        "code",
+        "capabilities",
+        "decisions"
+      ],
+      "reason": "Active Work Item has limited graph relationships.",
+      "message": "WI-001 has no code ownership, linked capability, linked decision.",
+      "suggested_front_matter": {
+        "code": [
+          "src/<area>/**"
+        ],
+        "capabilities": [
+          "<capability>"
+        ],
+        "decisions": [
+          "ADR-XXX"
+        ]
+      }
+    },
+    {
+      "artifact_id": "WI-002",
+      "artifact_type": "work-item",
+      "path": "knowledge/delivery/work-items/draft/WI-002-nucleo-conversacional.md",
+      "severity": "info",
+      "missing": [
+        "code",
+        "capabilities",
+        "decisions"
+      ],
+      "reason": "Active Work Item has limited graph relationships.",
+      "message": "WI-002 has no code ownership, linked capability, linked decision.",
+      "suggested_front_matter": {
+        "code": [
+          "src/<area>/**"
+        ],
+        "capabilities": [
+          "<capability>"
+        ],
+        "decisions": [
+          "ADR-XXX"
+        ]
+      }
+    },
+    {
+      "artifact_id": "WI-003",
+      "artifact_type": "work-item",
+      "path": "knowledge/delivery/work-items/draft/WI-003-herramientas-backend.md",
+      "severity": "info",
+      "missing": [
+        "code",
+        "capabilities",
+        "decisions"
+      ],
+      "reason": "Active Work Item has limited graph relationships.",
+      "message": "WI-003 has no code ownership, linked capability, linked decision.",
+      "suggested_front_matter": {
+        "code": [
+          "src/<area>/**"
+        ],
+        "capabilities": [
+          "<capability>"
+        ],
+        "decisions": [
+          "ADR-XXX"
+        ]
+      }
+    },
+    {
+      "artifact_id": "WI-004",
+      "artifact_type": "work-item",
+      "path": "knowledge/delivery/work-items/draft/WI-004-form-engine.md",
+      "severity": "info",
+      "missing": [
+        "code",
+        "capabilities",
+        "decisions"
+      ],
+      "reason": "Active Work Item has limited graph relationships.",
+      "message": "WI-004 has no code ownership, linked capability, linked decision.",
+      "suggested_front_matter": {
+        "code": [
+          "src/<area>/**"
+        ],
+        "capabilities": [
+          "<capability>"
+        ],
+        "decisions": [
+          "ADR-XXX"
+        ]
+      }
+    },
+    {
+      "artifact_id": "WI-005",
+      "artifact_type": "work-item",
+      "path": "knowledge/delivery/work-items/draft/WI-005-oportunity-engine-proactivo.md",
+      "severity": "info",
+      "missing": [
+        "code",
+        "capabilities",
+        "decisions"
+      ],
+      "reason": "Active Work Item has limited graph relationships.",
+      "message": "WI-005 has no code ownership, linked capability, linked decision.",
+      "suggested_front_matter": {
+        "code": [
+          "src/<area>/**"
+        ],
+        "capabilities": [
+          "<capability>"
+        ],
+        "decisions": [
+          "ADR-XXX"
+        ]
+      }
+    },
+    {
+      "artifact_id": "WI-006",
+      "artifact_type": "work-item",
+      "path": "knowledge/delivery/work-items/draft/WI-006-demo-final.md",
+      "severity": "info",
+      "missing": [
+        "code",
+        "capabilities",
+        "decisions"
+      ],
+      "reason": "Active Work Item has limited graph relationships.",
+      "message": "WI-006 has no code ownership, linked capability, linked decision.",
+      "suggested_front_matter": {
+        "code": [
+          "src/<area>/**"
+        ],
+        "capabilities": [
+          "<capability>"
+        ],
+        "decisions": [
+          "ADR-XXX"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,113 @@
+{
+  "generated_at": "2026-07-23T01:19:45.478Z",
+  "project": {
+    "name": "ProteccionInteligente360",
+    "state": "new",
+    "structure": "monorepo"
+  },
+  "scope": "all",
+  "scope_reason": "All supported Work Item statuses are included.",
+  "included_statuses": [
+    "draft",
+    "ready",
+    "in-progress",
+    "blocked",
+    "completed"
+  ],
+  "excluded_statuses": [
+    "archived"
+  ],
+  "nodes": [
+    {
+      "id": "delivery:delivery",
+      "type": "delivery",
+      "label": "Delivery",
+      "path": "knowledge/delivery/roadmap.md"
+    },
+    {
+      "id": "wi:WI-001",
+      "type": "work-item",
+      "label": "WI-001 Fundación de la plataforma — Repositorio, backend, frontend e infraestructura base",
+      "path": "knowledge/delivery/work-items/draft/WI-001-fundacion-plataforma.md",
+      "status": "draft",
+      "knowledge_level": "K2"
+    },
+    {
+      "id": "initiative:hackathon-mvp",
+      "type": "initiative",
+      "label": "Hackathon MVP"
+    },
+    {
+      "id": "wi:WI-002",
+      "type": "work-item",
+      "label": "WI-002 Núcleo conversacional — Router, Conversation Hub, Chat UI y agentes de crédito y seguros",
+      "path": "knowledge/delivery/work-items/draft/WI-002-nucleo-conversacional.md",
+      "status": "draft",
+      "knowledge_level": "K2"
+    },
+    {
+      "id": "wi:WI-003",
+      "type": "work-item",
+      "label": "WI-003 Herramientas backend — Customer, Credit, Insurance, Document, Notification Tools vía FastMCP",
+      "path": "knowledge/delivery/work-items/draft/WI-003-herramientas-backend.md",
+      "status": "draft",
+      "knowledge_level": "K2"
+    },
+    {
+      "id": "wi:WI-004",
+      "type": "work-item",
+      "label": "WI-004 Form Engine — Eliminación del PDF, conversión de formularios oficiales a JSON estructurado",
+      "path": "knowledge/delivery/work-items/draft/WI-004-form-engine.md",
+      "status": "draft",
+      "knowledge_level": "K2"
+    },
+    {
+      "id": "wi:WI-005",
+      "type": "work-item",
+      "label": "WI-005 Opportunity Engine — Motor de reglas proactivo con scheduler, elegibilidad y campañas WhatsApp",
+      "path": "knowledge/delivery/work-items/draft/WI-005-oportunity-engine-proactivo.md",
+      "status": "draft",
+      "knowledge_level": "K2"
+    },
+    {
+      "id": "wi:WI-006",
+      "type": "work-item",
+      "label": "WI-006 Demo final — Flujo completo integrado, pruebas y despliegue",
+      "path": "knowledge/delivery/work-items/draft/WI-006-demo-final.md",
+      "status": "draft",
+      "knowledge_level": "K2"
+    }
+  ],
+  "edges": [
+    {
+      "from": "wi:WI-001",
+      "to": "initiative:hackathon-mvp",
+      "type": "belongs_to"
+    },
+    {
+      "from": "wi:WI-002",
+      "to": "initiative:hackathon-mvp",
+      "type": "belongs_to"
+    },
+    {
+      "from": "wi:WI-003",
+      "to": "initiative:hackathon-mvp",
+      "type": "belongs_to"
+    },
+    {
+      "from": "wi:WI-004",
+      "to": "initiative:hackathon-mvp",
+      "type": "belongs_to"
+    },
+    {
+      "from": "wi:WI-005",
+      "to": "initiative:hackathon-mvp",
+      "type": "belongs_to"
+    },
+    {
+      "from": "wi:WI-006",
+      "to": "initiative:hackathon-mvp",
+      "type": "belongs_to"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+version: 1
+project:
+  name: "ProteccionInteligente360"
+  state: new
+  structure: monorepo
+  language: es
+  domains:
+    - customers
+    - credits
+    - insurance
+    - claims
+    - documents
+    - notifications
+    - opportunities
+    - shared
+team:
+  size: indie
+knowledge:
+  default_level: K2
+guard:
+  silent_without_ownership: true

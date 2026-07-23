@@ -1,0 +1,16 @@
+flowchart LR
+  delivery_delivery["Delivery"]
+  wi_WI_001["WI-001 Fundación de la plataforma — Repositorio, backend, frontend e infraestructura base"]
+  initiative_hackathon_mvp["Hackathon MVP"]
+  wi_WI_002["WI-002 Núcleo conversacional — Router, Conversation Hub, Chat UI y agentes de crédito y seguros"]
+  wi_WI_003["WI-003 Herramientas backend — Customer, Credit, Insurance, Document, Notification Tools vía FastMCP"]
+  wi_WI_004["WI-004 Form Engine — Eliminación del PDF, conversión de formularios oficiales a JSON estructurado"]
+  wi_WI_005["WI-005 Opportunity Engine — Motor de reglas proactivo con scheduler, elegibilidad y campañas WhatsApp"]
+  wi_WI_006["WI-006 Demo final — Flujo completo integrado, pruebas y despliegue"]
+
+  wi_WI_001 -->|belongs_to| initiative_hackathon_mvp
+  wi_WI_002 -->|belongs_to| initiative_hackathon_mvp
+  wi_WI_003 -->|belongs_to| initiative_hackathon_mvp
+  wi_WI_004 -->|belongs_to| initiative_hackathon_mvp
+  wi_WI_005 -->|belongs_to| initiative_hackathon_mvp
+  wi_WI_006 -->|belongs_to| initiative_hackathon_mvp

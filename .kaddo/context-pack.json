@@ -1,0 +1,461 @@
+{
+  "version": "1",
+  "generatedAt": "2026-07-16T18:43:09.621Z",
+  "project": {
+    "name": "ProteccionInteligente360",
+    "state": "new",
+    "teamSize": "indie",
+    "structure": "monorepo",
+    "language": "Spanish"
+  },
+  "scan": {
+    "available": false,
+    "languages": [],
+    "frameworks": [],
+    "packageManagers": [],
+    "sourceDirectories": [],
+    "migrationDirectories": [],
+    "contractFiles": [],
+    "infrastructureFiles": []
+  },
+  "knowledge": {
+    "summary": "> What is true about this product right now.",
+    "roadmapSummary": "> What we intend to build and why. Hackathon MVP con equipo de 1 persona.",
+    "inventoryAvailable": false,
+    "workItems": [
+      {
+        "id": "WI-001",
+        "type": "feature",
+        "title": "Fundación de la plataforma — Repositorio, backend, frontend e infraestructura base",
+        "status": "draft",
+        "lifecycle": "draft",
+        "knowledgeLevel": "K2",
+        "domains": [
+          "shared"
+        ],
+        "source": {
+          "type": "manual",
+          "inferred": false
+        }
+      },
+      {
+        "id": "WI-002",
+        "type": "feature",
+        "title": "Núcleo conversacional — Router, Conversation Hub, Chat UI y agentes de crédito y seguros",
+        "status": "draft",
+        "lifecycle": "draft",
+        "knowledgeLevel": "K2",
+        "domains": [
+          "shared",
+          "credits",
+          "insurance"
+        ],
+        "source": {
+          "type": "manual",
+          "inferred": false
+        }
+      },
+      {
+        "id": "WI-003",
+        "type": "feature",
+        "title": "Herramientas backend — Customer, Credit, Insurance, Document, Notification Tools vía FastMCP",
+        "status": "draft",
+        "lifecycle": "draft",
+        "knowledgeLevel": "K2",
+        "domains": [
+          "customers",
+          "credits",
+          "insurance",
+          "documents",
+          "notifications"
+        ],
+        "source": {
+          "type": "manual",
+          "inferred": false
+        }
+      },
+      {
+        "id": "WI-004",
+        "type": "feature",
+        "title": "Form Engine — Eliminación del PDF, conversión de formularios oficiales a JSON estructurado",
+        "status": "draft",
+        "lifecycle": "draft",
+        "knowledgeLevel": "K2",
+        "domains": [
+          "shared",
+          "credits",
+          "insurance"
+        ],
+        "source": {
+          "type": "manual",
+          "inferred": false
+        }
+      },
+      {
+        "id": "WI-005",
+        "type": "feature",
+        "title": "Opportunity Engine — Motor de reglas proactivo con scheduler, elegibilidad y campañas WhatsApp",
+        "status": "draft",
+        "lifecycle": "draft",
+        "knowledgeLevel": "K2",
+        "domains": [
+          "opportunities",
+          "notifications",
+          "customers"
+        ],
+        "source": {
+          "type": "manual",
+          "inferred": false
+        }
+      },
+      {
+        "id": "WI-006",
+        "type": "feature",
+        "title": "Demo final — Flujo completo integrado, pruebas y despliegue",
+        "status": "draft",
+        "lifecycle": "draft",
+        "knowledgeLevel": "K2",
+        "domains": [
+          "shared"
+        ],
+        "source": {
+          "type": "manual",
+          "inferred": false
+        }
+      }
+    ],
+    "artifacts": []
+  },
+  "layers": [
+    {
+      "layer": "Business",
+      "status": "Missing",
+      "detected": []
+    },
+    {
+      "layer": "Product",
+      "status": "Missing",
+      "detected": []
+    },
+    {
+      "layer": "Tech",
+      "status": "Structured",
+      "detected": [
+        "knowledge.md",
+        "stack.md"
+      ]
+    },
+    {
+      "layer": "Delivery",
+      "status": "Traceable",
+      "detected": [
+        "WI-001-fundacion-plataforma.md",
+        "WI-002-nucleo-conversacional.md",
+        "WI-003-herramientas-backend.md",
+        "WI-004-form-engine.md",
+        "WI-005-oportunity-engine-proactivo.md",
+        "WI-006-demo-final.md",
+        "roadmap.md"
+      ]
+    }
+  ],
+  "knowledgeQuality": {
+    "business": {
+      "status": "Missing",
+      "artifacts": {
+        "knowledge/business/business.md": "missing"
+      }
+    },
+    "product": {
+      "status": "Missing",
+      "artifacts": {
+        "knowledge/product/product.md": "missing",
+        "knowledge/product/capabilities.md": "missing"
+      }
+    },
+    "tech": {
+      "status": "Structured",
+      "artifacts": {
+        "knowledge/tech/codebase.md": "missing",
+        "knowledge/tech/current-state.md": "missing"
+      }
+    },
+    "delivery": {
+      "status": "Traceable",
+      "artifacts": {
+        "knowledge/delivery/roadmap.md": "useful"
+      }
+    }
+  },
+  "roadmap": {
+    "present": true,
+    "initiatives": 0,
+    "work_item_candidates": 0,
+    "materialized_work_items": 6,
+    "remaining_work_item_candidates": 0,
+    "candidates": 0,
+    "materialized": 6,
+    "remaining": 0
+  },
+  "phase": {
+    "phase": "Setup",
+    "reasons": [
+      "The knowledge baseline is incomplete."
+    ],
+    "recommendedAgents": [],
+    "nextStep": "Run `kaddo bootstrap` to create the project knowledge baseline.",
+    "llmInstructions": [
+      "Run `kaddo bootstrap` before using agent handoff.",
+      "Do not ask an LLM to generate baseline knowledge until bootstrap files exist."
+    ]
+  },
+  "nextStepRecommendation": {
+    "id": "bootstrap",
+    "phase": "Setup",
+    "label": "Run `kaddo bootstrap` to create the project knowledge baseline.",
+    "command": "kaddo bootstrap",
+    "reason": "The knowledge baseline is incomplete."
+  },
+  "deliveryState": {
+    "phase": "Setup",
+    "draft_work_items": 6,
+    "refined_draft_work_items": 0,
+    "refined_draft_ids": [],
+    "ready_work_items": 0,
+    "ready_work_item_ids": [],
+    "in_progress_work_items": 0,
+    "blocked_work_items": 0,
+    "total_work_items": 6,
+    "ownership_coverage": "0/6",
+    "remaining_work_item_candidates": 0,
+    "decision_candidates": 0,
+    "accepted_adrs": 0,
+    "adapters_installed": 0
+  },
+  "techDecisions": {
+    "status": "none",
+    "candidates": 0,
+    "adrs": 0,
+    "draft_adrs": 0,
+    "accepted_adrs": 0,
+    "candidate_list": [],
+    "candidates_source": null,
+    "candidates_legacy_location": false,
+    "candidates_both_exist": false
+  },
+  "techKnowledge": {
+    "core": {
+      "current-state.md": false,
+      "codebase.md": false
+    },
+    "decisions": {
+      "adrs": 0,
+      "dir": false
+    },
+    "discovery": {
+      "architecture-notes.md": false,
+      "decision-candidates.md": false,
+      "legacyLocation": false
+    }
+  },
+  "roadmapQuality": {
+    "initiatives": {
+      "total": 0,
+      "grounded": 0,
+      "with_related_domain": 0,
+      "with_related_capability": 0,
+      "with_source_signals": 0,
+      "needs_refinement": false,
+      "items": []
+    },
+    "work_item_candidates": {
+      "total": 0,
+      "with_source_initiative": 0,
+      "with_related_domain": 0,
+      "with_related_capability": 0
+    }
+  },
+  "installedAssets": {
+    "version": "3.60.0",
+    "agents": {
+      "total": 19,
+      "installed": 0,
+      "outdated": 0,
+      "unknown_version": 0,
+      "modified": 0
+    },
+    "skills": {
+      "total": 7,
+      "installed": 0,
+      "outdated": 0,
+      "unknown_version": 0,
+      "modified": 0
+    }
+  },
+  "deliveryMix": {
+    "feature": 6
+  },
+  "external": [],
+  "graph": {
+    "generatedAt": "2026-07-16T18:24:28.781Z",
+    "scope": "all",
+    "scopeReason": "All supported Work Item statuses are included.",
+    "includedStatuses": [
+      "draft",
+      "ready",
+      "in-progress",
+      "blocked",
+      "completed"
+    ],
+    "excludedStatuses": [
+      "archived"
+    ],
+    "nodes": 8,
+    "edges": 6,
+    "activeWorkItemsConnectedToCode": 0
+  },
+  "graphHints": {
+    "scope": "all",
+    "scopeReason": "All supported Work Item statuses are included.",
+    "quality": "partial",
+    "totalHints": 6,
+    "activeWorkItemHints": 6,
+    "messages": [
+      "WI-001 has no code ownership, linked capability, linked decision.",
+      "WI-002 has no code ownership, linked capability, linked decision.",
+      "WI-003 has no code ownership, linked capability, linked decision.",
+      "WI-004 has no code ownership, linked capability, linked decision.",
+      "WI-005 has no code ownership, linked capability, linked decision.",
+      "WI-006 has no code ownership, linked capability, linked decision."
+    ]
+  },
+  "skills": [],
+  "scanSignals": null,
+  "projectRoute": {
+    "type": "new",
+    "currentStep": "refine-work-item",
+    "completed": 3,
+    "total": 12,
+    "progressPercent": 25,
+    "steps": [
+      {
+        "id": "enable-kaddo",
+        "label": "Enable Kaddo",
+        "status": "done",
+        "evidence": [
+          ".kaddo/config.yml"
+        ]
+      },
+      {
+        "id": "define-business",
+        "label": "Define business context",
+        "status": "pending",
+        "agent": "business-agent"
+      },
+      {
+        "id": "define-product",
+        "label": "Define product context",
+        "status": "pending",
+        "agent": "capability-agent"
+      },
+      {
+        "id": "discover-capabilities",
+        "label": "Define initial capabilities",
+        "status": "pending",
+        "agent": "capability-agent"
+      },
+      {
+        "id": "describe-architecture",
+        "label": "Define initial architecture",
+        "status": "pending",
+        "agent": "architecture-agent"
+      },
+      {
+        "id": "create-work-source",
+        "label": "Create initial work source",
+        "status": "done",
+        "evidence": [
+          "knowledge/delivery/roadmap.md"
+        ]
+      },
+      {
+        "id": "materialize-work-item",
+        "label": "Create first Work Item",
+        "status": "done",
+        "evidence": [
+          "knowledge/delivery/work-items/"
+        ]
+      },
+      {
+        "id": "refine-work-item",
+        "label": "Refine Work Item",
+        "status": "current",
+        "reason": "There are 6 draft Work Items and no Work Item is ready.",
+        "agent": "work-item-agent",
+        "skill": "work-item-refinement"
+      },
+      {
+        "id": "suggest-ownership",
+        "label": "Suggest ownership",
+        "status": "next",
+        "reason": "Ownership coverage is 0/6.",
+        "command": "kaddo owners suggest"
+      },
+      {
+        "id": "prepare-implementation",
+        "label": "Prepare implementation",
+        "status": "next"
+      },
+      {
+        "id": "run-guard",
+        "label": "Run guard",
+        "status": "pending"
+      },
+      {
+        "id": "capture-learning",
+        "label": "Capture learning",
+        "status": "pending"
+      }
+    ]
+  },
+  "metadataHealth": {
+    "findings": [
+      {
+        "file": "knowledge/delivery/roadmap.md",
+        "field": "generated_by",
+        "issue": "missing",
+        "detail": "Missing `generated_by` in frontmatter."
+      },
+      {
+        "file": "knowledge/delivery/roadmap.md",
+        "field": "template_version",
+        "issue": "missing",
+        "detail": "Missing `template_version` in frontmatter."
+      }
+    ],
+    "healthy": 0,
+    "drifted": 1
+  },
+  "mappedModules": [],
+  "missing": [
+    "Scan baseline missing. Run `kaddo scan` for better context.",
+    "No technical inventory found. Run `kaddo scan` to generate it."
+  ],
+  "handoff": {
+    "recommendedAgents": [],
+    "nextSteps": [
+      "Run `kaddo bootstrap` to create the project knowledge baseline."
+    ],
+    "instructions": [
+      "No agent handoff yet.",
+      "Run `kaddo bootstrap` first to create the baseline files."
+    ],
+    "operatingRules": [
+      "**Never run `git commit`, `git push` or `git merge` without explicit human confirmation.**",
+      "Never push or merge automatically — ever. Suggest a Conventional Commit message and wait.",
+      "When implementing a Work Item, create a branch FIRST (per the project Git strategy, `.kaddo/git.yml`, default `feature/<id>-<slug>`). Never work directly on `main`.",
+      "After significant changes run `kaddo scan`, `kaddo owners suggest` and `kaddo guard`, and update the affected knowledge (ADR / capabilities / current-state).",
+      "Kaddo itself never calls an LLM and never runs git — every git action is the human’s."
+    ]
+  }
+}
