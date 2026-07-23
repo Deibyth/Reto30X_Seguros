@@ -1,0 +1,70 @@
+# openspec/config.yaml
+schema: spec-driven
+
+context: |
+  ProteccionInteligente360 — AI-driven member protection platform for Colsubsidio affiliates.
+  Monorepo with Python backend and React frontend.
+
+  ## Stack
+
+  ### Backend
+  - Python 3.12, FastAPI 0.115.6, SQLAlchemy 2.0 async + aiosqlite, Pydantic 2.10
+  - OpenAI SDK 1.58 via FastMCP (provider-agnostic; configured for Groq)
+  - Dependency management: pip + requirements.txt
+  - No linter, formatter, or type checker configured
+
+  ### Frontend
+  - Vite 6, React 18, TypeScript 5.7 (strict mode), TailwindCSS 3.4, shadcn/ui
+  - framer-motion, TanStack Query, Recharts
+  - Package manager: pnpm 9.15.4
+  - No test runner or linter configured
+
+  ### Database
+  - SQLite + aiosqlite (async via SQLAlchemy 2.0)
+
+  ### Orquestación
+  - Docker Compose: uvicorn --reload (backend) + pnpm dev (frontend)
+
+  ### Testing & Quality
+  - Backend: pytest + pytest-asyncio + pytest-cov (9 test files, integration via httpx TestClient)
+  - Frontend: no test runner configured, TypeScript strict mode (build-time only)
+  - No linter, formatter, or type checker configured (backend)
+
+  Indie team, greenfield. Hackathon: Colsubsidio x 30X.
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session
+  apply:
+    guidelines:
+      - Follow existing code patterns
+    tdd: true
+    test_command: "pytest backend/tests/ -x -q"
+  verify:
+    test_command: "pytest backend/tests/ -x -q"
+    build_command: ""
+    coverage_threshold: 60
+  archive:
+    - Warn before merging destructive deltas
+
+testing:
+  strict_tdd: true
+  test_runner: pytest
+  layers:
+    unit: pytest + pytest-asyncio
+    integration: httpx (FastAPI TestClient)
+    e2e: null
+  coverage: pytest-cov
+  quality:
+    linter: null
+    type_checker: TypeScript strict (frontend build-time only)
+    formatter: null
