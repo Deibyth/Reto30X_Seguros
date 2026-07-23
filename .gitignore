@@ -45,3 +45,5 @@ backend/data/*.db
 
 # Secrets / keys (manual cleanup)
 apikey_llm.txt
+=0.3.0
+Usos_Productos_Afiliados_SIN_ID.csv
