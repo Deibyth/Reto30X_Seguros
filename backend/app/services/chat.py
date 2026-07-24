@@ -309,6 +309,28 @@ class ChatService:
 
             parts.append(self._build_profiling_instructions(product_context))
 
+            # --- Anonymous salary profiling ---
+            profile = session.insurance_profile or {}
+            if not profile.get("categoria_afiliacion"):
+                parts.append(
+                    "--- PERFILACIÓN SIN DOCUMENTO ---\n"
+                    "El usuario NO tiene un documento de identidad registrado, así que "
+                    "no podemos buscar su categoría de afiliación.\n\n"
+                    "Para poder recomendar los seguros adecuados, preguntale su rango "
+                    "salarial mensual aproximado. Según lo que responda, se asigna:\n"
+                    "- Más de $4.500.000 → Categoría A (recomendación completa)\n"
+                    "- Entre $2.000.000 y $4.500.000 → Categoría B (recomendación base)\n"
+                    "- Menos de $2.000.000 → Categoría C (recomendación limitada)\n\n"
+                    "Registrá esta respuesta con la herramienta `set_category` "
+                    "pasando el valor 'A', 'B' o 'C'. Ejemplo:\n"
+                    "<function=set_category>{\"categoria\": \"A\"}\n\n"
+                    "Hacé esta pregunta de forma natural dentro de la charla, "
+                    "NO como un formulario. Ejemplo: '¿En qué rango de ingresos "
+                    "estás mensualmente? Así puedo recomendarte lo que mejor se ajusta.'\n"
+                    "Si el usuario prefiere no compartir sus ingresos, asigná Categoría C "
+                    "por defecto para continuar."
+                )
+
         # --- Active form schema ---
         if is_insurance:
             parts.append("--- ESQUEMA DEL FORMULARIO DE SEGURO ---")
@@ -842,6 +864,38 @@ class ChatService:
 
             current_state = session.estado_actual
             is_insurance = self._is_insurance_state(current_state)
+
+            # --- Profile pre-seed from get_customer ---
+            if "get_customer" in tool_names and is_insurance:
+                for tc in tool_calls:
+                    if tc.function.name == "get_customer":
+                        try:
+                            args = json.loads(tc.function.arguments)
+                            doc = args.get("documento_identidad")
+                            if doc:
+                                from app.services.segment_data import SegmentDataService
+                                try:
+                                    svc = SegmentDataService.get_instance()
+                                    if svc and svc.is_loaded():
+                                        info = svc.lookup_by_documento(doc)
+                                        if info:
+                                            # Create NEW dict so SQLAlchemy detects the change
+                                            profile = dict(session.insurance_profile or {})
+                                            existing_keys = set(profile.keys())
+                                            if info.get("categoria"):
+                                                profile["categoria_afiliacion"] = info["categoria"]
+                                            if info.get("segmento"):
+                                                profile["segmento_grupo_familiar"] = info["segmento"]
+                                            session.insurance_profile = profile
+                                            new_keys = set(profile.keys()) - existing_keys
+                                            if new_keys:
+                                                logger.debug(
+                                                    "Profile pre-seeded from get_customer: %s", new_keys
+                                                )
+                                except Exception:
+                                    logger.debug("Profile pre-seed skipped (segment data unavailable)")
+                        except (json.JSONDecodeError, KeyError):
+                            logger.debug("Could not parse get_customer args for pre-seed")
 
             # --- Insurance state machine transitions ---
             if is_insurance:
