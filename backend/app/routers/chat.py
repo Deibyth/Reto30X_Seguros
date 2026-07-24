@@ -8,7 +8,7 @@ Falls back to echo stub if no AIClient is configured.
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, File, Header, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field
 
 from app.services.chat import ChatService
@@ -33,6 +33,14 @@ class ChatResponse(BaseModel):
     model: str | None = None
     campos_actualizados: list[str] = Field(default_factory=list)
     completitud_pct: float = Field(default=0.0)
+    audio_url: str | None = None
+
+
+class TranscribeResponse(BaseModel):
+    """Response from the speech-to-text transcription endpoint."""
+
+    text: str | None = None
+    error: str | None = None
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -90,3 +98,38 @@ async def chat_handler(
             status_code=503,
             detail="El servicio de IA no está disponible en este momento.",
         ) from exc
+
+
+@router.post("/chat/transcribe", response_model=TranscribeResponse)
+async def transcribe_handler(
+    audio: UploadFile = File(...),
+    http_request: Request = None,  # type: ignore[assignment]
+) -> TranscribeResponse:
+    """Transcribe an audio file to text using ElevenLabs Scribe.
+
+    Accepts an audio upload, returns transcribed text.
+    Returns ``text: None`` and an ``error`` message on failure.
+    """
+    chat_service: ChatService | None = getattr(
+        http_request.app.state, "chat_service", None
+    )
+
+    if chat_service is None or chat_service.stt_service is None:
+        return TranscribeResponse(
+            text=None,
+            error="Speech-to-text service is not available.",
+        )
+
+    audio_bytes = await audio.read()
+    if not audio_bytes:
+        return TranscribeResponse(
+            text=None,
+            error="No audio data received.",
+        )
+
+    try:
+        text = await chat_service.stt_service.transcribe(audio_bytes)
+        return TranscribeResponse(text=text, error=None if text else "Transcription returned no text.")
+    except Exception as exc:
+        logger.error("Transcribe handler error: %s", exc)
+        return TranscribeResponse(text=None, error="Transcription service error.")
