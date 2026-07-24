@@ -72,11 +72,273 @@ PRODUCTS: dict[str, dict[str, Any]] = {
         "edad_max": 70,
     },
 }
- 
+
+# ──────────────────────────────────────────────
+# CATALOG PRODUCTS — real Colsubsidio catalog (from catalog.txt)
+# ──────────────────────────────────────────────
+
+CATALOG_PRODUCTS: dict[str, dict[str, Any]] = {
+    # — Movilidad —
+    "movilidad_carro": {
+        "nombre": "Seguro de Carro",
+        "descripcion": "Cobertura para vehículo particular: daños, robo, lesiones a terceros",
+        "categoria_producto": "Movilidad",
+        "aseguradoras": "Allianz · Liberty · Sura · AXA Colpatria · Bolívar · Equidad · Mapfre · SBS · Mundial · GEA",
+        "prima_base": 65_000,
+    },
+    "movilidad_bicicleta": {
+        "nombre": "Bicicleta y patineta",
+        "descripcion": "Cobertura para bicicletas y patinetas eléctricas, con protección contra robo y daños",
+        "categoria_producto": "Movilidad",
+        "aseguradoras": "Allianz · Liberty · Sura · AXA Colpatria · Bolívar · Equidad · Mapfre · SBS · Mundial · GEA",
+        "prima_base": 15_000,
+    },
+    "movilidad_soat": {
+        "nombre": "SOAT",
+        "descripcion": "Seguro Obligatorio de Accidentes de Tránsito — obligatorio por ley",
+        "categoria_producto": "Movilidad",
+        "aseguradoras": "Allianz · Liberty · Sura · AXA Colpatria · Bolívar · Equidad · Mapfre · SBS · Mundial · GEA",
+        "prima_base": 0,  # Price depends on vehicle type, not consultive sale
+    },
+    "movilidad_asistencia_moto": {
+        "nombre": "Asistencia moto",
+        "descripcion": "Asistencia mecánica y jurídica para motociclistas",
+        "categoria_producto": "Movilidad",
+        "aseguradoras": "Allianz · Liberty · Sura · AXA Colpatria · Bolívar · Equidad · Mapfre · SBS · Mundial · GEA",
+        "prima_base": 25_000,
+    },
+    # — Mascotas —
+    "mascotas_perro_gato": {
+        "nombre": "Seguro perro y gato",
+        "descripcion": "Cobertura veterinaria integral para perros y gatos",
+        "categoria_producto": "Mascotas",
+        "aseguradoras": "Sura · HDI · Mundial · GEA · VetPlus",
+        "prima_base": 30_000,
+    },
+    "mascotas_asistencias_veterinarias": {
+        "nombre": "Asistencias veterinarias",
+        "descripcion": "Asistencia veterinaria básica para consultas y emergencias",
+        "categoria_producto": "Mascotas",
+        "aseguradoras": "Sura · HDI · Mundial · GEA · VetPlus",
+        "prima_base": 18_000,
+    },
+    "mascotas_medicina_prepagada": {
+        "nombre": "Medicina prepagada (mascota)",
+        "descripcion": "Medicina prepagada con cobertura ambulatoria y hospitalaria para mascotas",
+        "categoria_producto": "Mascotas",
+        "aseguradoras": "Sura · HDI · Mundial · GEA · VetPlus",
+        "prima_base": 45_000,
+    },
+    # — Hogar —
+    "hogar_contenido": {
+        "nombre": "Hogar y contenido",
+        "descripcion": "Protección para vivienda y contenido contra daños, robo y siniestros",
+        "categoria_producto": "Hogar",
+        "aseguradoras": "Allianz · Liberty · Sura · AXA Colpatria · Bolívar · HDI · Mapfre · Estado · BBVA · Mundial",
+        "prima_base": 35_000,
+    },
+    "hogar_arrendamiento": {
+        "nombre": "Arrendamiento",
+        "descripcion": "Protección para inmuebles en arriendo contra daños y siniestros",
+        "categoria_producto": "Hogar",
+        "aseguradoras": "Allianz · Liberty · Sura · AXA Colpatria · Bolívar · HDI · Mapfre · Estado · BBVA · Mundial",
+        "prima_base": 28_000,
+    },
+    # — Personal y familiar —
+    "personal_vida": {
+        "nombre": "Seguro de Vida",
+        "descripcion": "Respaldo económico para beneficiarios en caso de fallecimiento. Incluye auxilio educativo por fallecimiento",
+        "categoria_producto": "Personal y familiar",
+        "aseguradoras": "Pan American Life · MetLife · BMI · Chubb · Sura · Allianz",
+        "prima_base": 45_000,
+    },
+    "personal_vida_ahorro": {
+        "nombre": "Vida y ahorro",
+        "descripcion": "Seguro de vida con componente de ahorro para protección y futuro financiero",
+        "categoria_producto": "Personal y familiar",
+        "aseguradoras": "Pan American Life · MetLife · BMI · Chubb · Sura · Allianz",
+        "prima_base": 60_000,
+    },
+    "personal_accidentes": {
+        "nombre": "Accidentes personales",
+        "descripcion": "Cobertura completa de accidentes individuales o familiares",
+        "categoria_producto": "Personal y familiar",
+        "aseguradoras": "Pan American Life · MetLife · BMI · Chubb · Sura · Allianz",
+        "prima_base": 25_000,
+    },
+    "personal_accidentes_exequial": {
+        "nombre": "Accidentes y exequial",
+        "descripcion": "Cobertura combinada de accidentes personales y servicios exequiales",
+        "categoria_producto": "Personal y familiar",
+        "aseguradoras": "Grupo Recordar · GEA",
+        "prima_base": 22_000,
+    },
+    "personal_exequial": {
+        "nombre": "Exequial",
+        "descripcion": "Servicios exequiales integrales. Extiende cobertura a mascotas",
+        "categoria_producto": "Personal y familiar",
+        "aseguradoras": "Grupo Recordar · GEA",
+        "prima_base": 12_000,
+    },
+    "personal_salud": {
+        "nombre": "Póliza de salud",
+        "descripcion": "Póliza integral de salud con cobertura médica, hospitalaria y ambulatoria",
+        "categoria_producto": "Personal y familiar",
+        "aseguradoras": "Sura · Allianz · Chubb",
+        "prima_base": 80_000,
+    },
+    "personal_asistencias_medicas": {
+        "nombre": "Asistencias médicas",
+        "descripcion": "Asistencia médica domiciliaria y ambulatoria. Médico a domicilio SOLO en Bogotá",
+        "categoria_producto": "Personal y familiar",
+        "aseguradoras": "Sura · Allianz · Mok",
+        "prima_base": 20_000,
+    },
+    "personal_asistencia_viajes": {
+        "nombre": "Asistencia en viajes",
+        "descripcion": "Emergencias médicas en viajes nacionales e internacionales 24/7",
+        "categoria_producto": "Personal y familiar",
+        "aseguradoras": "Chubb · Allianz · Mok",
+        "prima_base": 15_000,
+    },
+    "personal_asistencias_multiples": {
+        "nombre": "Asistencias múltiples",
+        "descripcion": "Asistencias combinadas: médica, hogar, viajes y jurídica en un solo plan",
+        "categoria_producto": "Personal y familiar",
+        "aseguradoras": "Sura · Allianz · Mok",
+        "prima_base": 35_000,
+    },
+    "personal_asesoria_juridica": {
+        "nombre": "Asesoría jurídica",
+        "descripcion": "Consultoría legal telefónica y presencial con abogados especializados",
+        "categoria_producto": "Personal y familiar",
+        "aseguradoras": "Legalcy",
+        "prima_base": 10_000,
+    },
+    # — Crédito —
+    "credito_vida_deudor": {
+        "nombre": "Vida deudor",
+        "descripcion": "Protección de deudas en caso de fallecimiento o incapacidad. SOLO dentro de un crédito",
+        "categoria_producto": "Crédito",
+        "aseguradoras": "Pan American Life · Sura",
+        "prima_base": 20_000,
+        "solo_en_credito": True,
+    },
+    "credito_desempleo": {
+        "nombre": "Desempleo",
+        "descripcion": "Cobertura de cuotas de crédito en caso de desempleo involuntario. SOLO dentro de un crédito",
+        "categoria_producto": "Crédito",
+        "aseguradoras": "Pan American Life · Sura",
+        "prima_base": 15_000,
+        "solo_en_credito": True,
+    },
+    "credito_incendio": {
+        "nombre": "Incendio",
+        "descripcion": "Protección contra incendios para bienes asegurados. SOLO dentro de un crédito",
+        "categoria_producto": "Crédito",
+        "aseguradoras": "Pan American Life · Sura",
+        "prima_base": 10_000,
+        "solo_en_credito": True,
+    },
+}
+
+# CATALOG_RULES: (product_id, [allowed_segmentos_vida], confidence, reason_template, restriccion)
+# segmento None = todos los segmentos; restriccion None = sin restricción adicional
+CATALOG_RULES: list[tuple[str, list[str | None], str, str, str | None]] = [
+    # — Movilidad —
+    ("movilidad_carro",        ["03"],        "medium", "Indicado para {segmento_label}", None),
+    ("movilidad_bicicleta",    ["01"],        "medium", "Ideal para perfil {segmento_label}", "Requiere número de serie visible del vehículo"),
+    ("movilidad_soat",         [None],        "low",   "Obligatorio por ley — no es venta consultiva", None),
+    ("movilidad_asistencia_moto", ["01"],     "medium", "Recomendado para {segmento_label}", None),
+    # — Mascotas —
+    ("mascotas_perro_gato",    ["01"],        "high",  "Perfecto para {segmento_label} con mascota", "Cubre ÚNICAMENTE perros y gatos"),
+    ("mascotas_asistencias_veterinarias", ["01", "04"], "medium", "Útil para {segmento_label} con mascota", None),
+    ("mascotas_medicina_prepagada", ["01"],  "medium", "Pensado para {segmento_label}", None),
+    # — Hogar —
+    ("hogar_contenido",        ["03"],        "high",  "Esencial para {segmento_label}", None),
+    ("hogar_arrendamiento",    ["03"],        "medium", "Protección para {segmento_label} arrendador", "NO ofrecer como propietario al segmento 01"),
+    # — Personal y familiar —
+    ("personal_vida",          ["02"],        "high",  "Fundamental para {segmento_label}", "NO ofrecer a 01 Joven solo: sin dependientes no protege a nadie"),
+    ("personal_vida_ahorro",   ["03"],        "medium", "Ideal para {segmento_label} con visión de futuro", None),
+    ("personal_accidentes",    ["01", "02", "05"], "high", "Recomendado para {segmento_label}", None),
+    ("personal_accidentes_exequial", ["02", "04"], "medium", "Cobertura combinada para {segmento_label}", None),
+    ("personal_exequial",      ["02", "04"],  "medium", "Tranquilidad para {segmento_label}", "Extiende cobertura a mascotas. NO ofrecer a 01 Joven solo"),
+    ("personal_salud",         ["02", "03", "04", "05"], "high", "Póliza integral para {segmento_label}", None),
+    ("personal_asistencias_medicas", ["04"],  "medium", "Pensado para {segmento_label}", "Médico a domicilio SOLO en Bogotá. Ciudad falta en 58·3% de la base — preguntar antes de prometer"),
+    ("personal_asistencia_viajes", [None],    "low",   "No es prioritario por segmento", None),
+    ("personal_asistencias_multiples", ["01", "03", "05"], "medium", "Multiasistencias para {segmento_label}", None),
+    ("personal_asesoria_juridica", [None],    "low",   "Disponible para todos los afiliados", None),
+    # — Crédito —
+    ("credito_vida_deudor",    ["01", "02", "03", "04", "05"], "medium",
+     "Protección dentro de crédito educativo", "NO se vende suelto: va DENTRO de un crédito"),
+    ("credito_desempleo",      ["01", "02", "03", "04", "05"], "medium",
+     "Protección dentro de crédito educativo", "NO se vende suelto: va DENTRO de un crédito"),
+    ("credito_incendio",       ["01", "02", "03", "04", "05"], "medium",
+     "Protección dentro de crédito educativo", "NO se vende suelto: va DENTRO de un crédito"),
+]
+
+SEGMENTO_VIDA_LABELS: dict[str | None, str] = {
+    "01": "Joven solo",
+    "02": "Cabeza de familia",
+    "03": "Hogar consolidado",
+    "04": "Adulto mayor",
+    "05": "Independiente",
+    None: "No especificado",
+}
+
+
+def derive_segmento_vida(profile: dict) -> str | None:
+    """Derive life-stage segment (01-05) from conversational profile and DB data.
+
+    Heuristic priority:
+    1.  60+                           → 04 Adulto mayor
+    2.  Tipo contrato independiente   → 05 Independiente
+    3.  Tiene hijos                   → 02 Cabeza de familia
+    4.  Edad < 35, soltero, no hijos  → 01 Joven solo
+    5.  Propietario, edad >= 35       → 03 Hogar consolidado
+    6.  Fallback                       → None
+    """
+    if not profile:
+        return None
+
+    edad = profile.get("edad")
+    try:
+        edad = int(edad) if edad is not None else None
+    except (ValueError, TypeError):
+        edad = None
+
+    tipo_contrato = (profile.get("tipo_contrato") or "").lower()
+    estado_civil = (profile.get("estado_civil") or "").lower()
+    familia_con_hijos = profile.get("familia_con_hijos") is True
+    es_propietario = profile.get("es_propietario_vivienda") is True
+
+    # 04 Adulto mayor
+    if edad is not None and edad >= 60:
+        return "04"
+
+    # 05 Independiente
+    if any(kw in tipo_contrato for kw in ("independiente", "prestación", "freelance", "honorarios")):
+        return "05"
+
+    # 02 Cabeza de familia
+    if familia_con_hijos:
+        return "02"
+
+    # 01 Joven solo
+    if edad is not None and edad < 35 and estado_civil in ("soltero", "soltera", ""):
+        return "01"
+
+    # 03 Hogar consolidado
+    if edad is not None and edad >= 35 and es_propietario:
+        return "03"
+
+    return None
+
+
 # ──────────────────────────────────────────────
 # RULES — 7 deterministic rules
 # ──────────────────────────────────────────────
- 
+
 RULES: list[tuple[str, Any]] = [
     ("vida", lambda p: p.get("familia_con_hijos") is True and p.get("preocupacion") == "proteger"),
     ("accidentes", lambda p: _edad_in_range(p.get("edad"), 18, 35) and p.get("estado_civil") == "soltero"),
@@ -110,6 +372,10 @@ _RULE_REASONS: dict[str, str] = {
     "movilidad": "Tiene vehículo y desea protegerlo",
     "vida_deudor": "Tiene deuda activa y desea proteger a sus beneficiarios",
 }
+
+# ──────────────────────────────────────────────
+# MULTIPLIERS
+# ──────────────────────────────────────────────
 
 # ──────────────────────────────────────────────
 # COMPOUND RULES — R8-R13
@@ -162,10 +428,6 @@ _R12_HIGH_PRODUCTS: set[str] = {"vida", "hogar"}
 
 _VALID_CATEGORIAS: set[str] = {"A", "B", "C"}
 
-
-# ──────────────────────────────────────────────
-# MULTIPLIERS
-# ──────────────────────────────────────────────
 
 COVERAGE_MULTIPLIERS: dict[str, float] = {
     "basica": 0.8,
@@ -265,8 +527,10 @@ def _match_compound_rules(
     compound: dict[str, tuple[str, str]] = {}
 
     for rule_cat, rule_seg, product_ids, confidence, reason_tpl in SEGMENT_RULES:
+        # Check categoria match
         if rule_cat is not None and rule_cat != categoria:
             continue
+        # Check segmento match
         if rule_seg is not None and rule_seg != segmento:
             continue
 
@@ -274,25 +538,78 @@ def _match_compound_rules(
         reason = reason_tpl.format(categoria=categoria or "", segmento_label=seg_label).strip()
 
         for pid in product_ids:
+            # Determine compound-level confidence
             if confidence == "mixed":
+                # R12 special case
                 conf = "high" if pid in _R12_HIGH_PRODUCTS else "medium"
             else:
                 conf = confidence
 
+            # Keep highest confidence from compound rules
             existing_conf = compound.get(pid, (None, ""))[0]
             if existing_conf == "high":
-                continue
+                continue  # already high
             compound[pid] = (conf, reason)
 
     return compound
+
+
+def _match_catalog_rules(
+    segmento_vida: str | None,
+    en_credito: bool = False,
+) -> dict[str, tuple[str, str, dict[str, Any]]]:
+    """Apply CATALOG_RULES and return ``{product_id: (confidence, reason, product_info)}``.
+
+    ``product_info`` includes the aseguradoras string and any restrictions.
+    Credit products are only included when ``en_credito=True``.
+    """
+    catalog_matches: dict[str, tuple[str, str, dict[str, Any]]] = {}
+
+    for pid, allowed_segs, confidence, reason_tpl, restriccion in CATALOG_RULES:
+        product = CATALOG_PRODUCTS.get(pid)
+        if not product:
+            continue
+
+        # Skip credit products unless in credit context
+        if product.get("solo_en_credito") and not en_credito:
+            continue
+
+        # Check segmento_vida match
+        seg_match = segmento_vida in allowed_segs if segmento_vida else (None in allowed_segs)
+
+        if not seg_match:
+            # If no specific segment matches, check if None (all) is allowed
+            if None not in allowed_segs:
+                continue
+            # None means "all", but only if profile has no specific segmento_vida
+            # If profile has a segmento_vida, only match if it's in allowed_segs
+            if segmento_vida is not None:
+                continue
+
+        seg_label = SEGMENTO_VIDA_LABELS.get(segmento_vida, "No especificado")
+        reason = reason_tpl.format(segmento_label=seg_label)
+
+        info = {
+            "aseguradoras": product.get("aseguradoras", ""),
+            "categoria_producto": product.get("categoria_producto", ""),
+        }
+        if restriccion:
+            info["restriccion"] = restriccion
+
+        catalog_matches[pid] = (confidence, reason, info)
+
+    return catalog_matches
 
 
 def match_products_by_segment(
     profile: dict,
     categoria: str | None = None,
     segmento: str | None = None,
+    *,
+    segmento_vida: str | None = None,
+    en_credito: bool = False,
 ) -> list[dict[str, Any]]:
-    """Apply compound rules (R8-R13) + conversational rules (R1-R7).
+    """Apply compound rules (R8-R13) + conversational rules (R1-R7) + catalog rules.
 
     Parameters
     ----------
@@ -302,42 +619,63 @@ def match_products_by_segment(
         One of ``"A"``, ``"B"``, ``"C"``, or None/MU for fallback.
     segmento : str | None
         Family segment label, or None if unknown.
+    segmento_vida : str | None
+        Life-stage segment (01-05) derived from profile, or None.
+    en_credito : bool
+        Whether the user is in a credit application flow (enables credit products).
 
     Returns
     -------
     list[dict]
-        Merged, sorted product list. Same schema as ``match_products()``.
+        Merged, sorted product list with catalog info where available.
     """
+    # 1. Determine if we should run compound rules
     categoria_usable = categoria in _VALID_CATEGORIAS
     should_run_compound = categoria_usable or segmento is not None
 
     logger.info(
-        "match_products_by_segment: categoria=%s, segmento=%s, compound=%s",
-        categoria, segmento, should_run_compound,
+        "match_products_by_segment: categoria=%s, segmento=%s, segmento_vida=%s, en_credito=%s",
+        categoria, segmento, segmento_vida, en_credito,
     )
 
+    # 2. Always run conversational R1-R7
     conversational = match_products(profile)
     conv_by_id: dict[str, dict[str, Any]] = {p["product_id"]: p for p in conversational}
 
     if not should_run_compound:
+        # Fallback: R1-R7 only, all confidence → medium, append "(perfil general)"
         for p in conversational:
             p["confidence"] = "medium"
             p["match_reason"] = f"{p['match_reason']} (perfil general)"
         conversational.sort(key=lambda p: (0 if p["confidence"] == "high" else 1, -p["prima_base"]))
+
+        # 2b. Still run catalog matching for segmento_vida
+        if segmento_vida:
+            catalog = _match_catalog_rules(segmento_vida, en_credito)
+            if catalog:
+                result_list = _merge_catalog_with_conversational(conversational, catalog, profile)
+                return result_list
         return conversational
 
+    # 3. Run compound rules
     compound: dict[str, tuple[str, str]] = _match_compound_rules(categoria, segmento)
 
+    # 4. Merge conversational + compound
     result: dict[str, dict[str, Any]] = {}
 
+    # Conversational products first
     for pid, p in conv_by_id.items():
-        entry = dict(p)
+        entry = dict(p)  # copy
         if pid in compound:
+            # Overlap: keep conversational confidence (high), append alignment reason
             if entry["confidence"] != "high":
+                # Conversational medium + compound medium = medium
                 pass
             entry["match_reason"] = f"{entry['match_reason']} y está alineado con tu categoría"
+        # else: conversational-only, keep as-is
         result[pid] = entry
 
+    # Compound-only products
     for pid, (conf, reason) in compound.items():
         if pid not in result and pid in PRODUCTS:
             product = PRODUCTS[pid]
@@ -351,6 +689,27 @@ def match_products_by_segment(
                 "confidence": conf,
             }
 
+    # 5. Add catalog products via segmento_vida
+    if segmento_vida:
+        catalog = _match_catalog_rules(segmento_vida, en_credito)
+        for pid, (conf, reason, info) in catalog.items():
+            if pid not in result:
+                # New catalog product
+                product = CATALOG_PRODUCTS[pid]
+                result[pid] = {
+                    "product_id": pid,
+                    "nombre": product["nombre"],
+                    "descripcion": product["descripcion"],
+                    "categoria": product.get("categoria_producto", ""),
+                    "prima_base": product.get("prima_base", 0),
+                    "match_reason": reason,
+                    "confidence": conf,
+                    "aseguradoras": info["aseguradoras"],
+                }
+                if "restriccion" in info:
+                    result[pid]["restriccion"] = info["restriccion"]
+
+    # 6. Segment boost reorder
     result_list = list(result.values())
     boost_products = SEGMENT_BOOST.get(segmento or "", [])
 
@@ -361,6 +720,34 @@ def match_products_by_segment(
 
     result_list.sort(key=_sort_key)
     return result_list
+
+
+def _merge_catalog_with_conversational(
+    conversational: list[dict[str, Any]],
+    catalog: dict[str, tuple[str, str, dict[str, Any]]],
+    profile: dict,
+) -> list[dict[str, Any]]:
+    """Merge catalog products into conversational-only results."""
+    result_by_id: dict[str, dict[str, Any]] = {p["product_id"]: p for p in conversational}
+
+    for pid, (conf, reason, info) in catalog.items():
+        if pid not in result_by_id:
+            product = CATALOG_PRODUCTS[pid]
+            result_by_id[pid] = {
+                "product_id": pid,
+                "nombre": product["nombre"],
+                "descripcion": product["descripcion"],
+                "categoria": product.get("categoria_producto", ""),
+                "prima_base": product.get("prima_base", 0),
+                "match_reason": reason,
+                "confidence": conf,
+                "aseguradoras": info["aseguradoras"],
+            }
+            if "restriccion" in info:
+                result_by_id[pid]["restriccion"] = info["restriccion"]
+        # If PID overlaps with conversational, keep conversational as-is (already added)
+
+    return list(result_by_id.values())
 
 
 def quote_product(
