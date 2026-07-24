@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     llm_model: str = "Qwen/Qwen3-14B"
     llm_base_url: str = ""
 
+    # ElevenLabs Voice (TTS + STT) — optional
+    elevenlabs_api_key: str = ""
+    elevenlabs_voice_id: str = "Xb7hH8MSUJpSbSDYk0k2"
+    elevenlabs_agent_id: str = ""
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

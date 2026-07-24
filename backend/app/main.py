@@ -11,6 +11,7 @@ Architecture
 """
 
 import logging
+import os
 import sys
 import time
 from contextlib import asynccontextmanager
@@ -29,6 +30,7 @@ if not _app_logger.handlers:
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.ai import AIClient
 from app.config import Settings
@@ -112,7 +114,32 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.tool_bridge = tool_bridge
     logger.info("ToolBridge initialized")
 
-    # 6. Initialize ChatService (orchestrates AI + tools + persistence)
+    # 6. Initialize Voice Services (TTS/STT — optional, requires ELEVENLABS_API_KEY)
+    tts_service = None
+    stt_service = None
+    if settings.elevenlabs_api_key:
+        from app.services.tts import TTSService
+        from app.services.stt import STTService
+
+        static_audio_dir = os.path.join(os.path.dirname(__file__), "..", "static", "audio")
+        budget_path = os.path.join(os.path.dirname(__file__), "..", "data", "tts_budget.json")
+
+        tts_service = TTSService(
+            api_key=settings.elevenlabs_api_key,
+            voice_id=settings.elevenlabs_voice_id,
+            static_dir=static_audio_dir,
+            budget_path=budget_path,
+        )
+        stt_service = STTService(api_key=settings.elevenlabs_api_key)
+        app.state.tts_service = tts_service
+        app.state.stt_service = stt_service
+        logger.info(
+            "Voice services initialized (voice_id=%s)", settings.elevenlabs_voice_id
+        )
+    else:
+        logger.info("Voice services not initialized — no ELEVENLABS_API_KEY")
+
+    # 7. Initialize ChatService (orchestrates AI + tools + persistence)
     if ai_client is not None and db.async_session_maker is not None:
         from app.services.chat import ChatService
 
@@ -120,6 +147,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             session_maker=db.async_session_maker,
             ai_client=ai_client,
             tool_bridge=tool_bridge,
+            tts_service=tts_service,
+            stt_service=stt_service,
         )
         app.state.chat_service = chat_service
         logger.info("ChatService initialized")
@@ -223,6 +252,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(chat_router)
     app.include_router(analytics_router)
     app.include_router(outbound_router)
+
+    # Serve cached TTS audio files
+    audio_static_dir = os.path.join(
+        os.path.dirname(__file__), "..", "static", "audio"
+    )
+    os.makedirs(audio_static_dir, exist_ok=True)
+    app.mount("/audio", StaticFiles(directory=audio_static_dir), name="audio")
 
     return app
 
