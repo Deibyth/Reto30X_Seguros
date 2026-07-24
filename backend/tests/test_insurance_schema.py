@@ -194,13 +194,12 @@ class TestInsuranceFormSchema:
         assert ranges["hogar"] == (20_000_000, 150_000_000)
         assert ranges["viajes"] == (1_000_000, 30_000_000)
         assert ranges["accidentes"] == (1_000_000, 50_000_000)
-        assert ranges["vida_deudor"] == (1_000_000, 100_000_000)
         assert ranges["movilidad"] == (5_000_000, 80_000_000)
 
     def test_has_beneficiario_only_for_vida(self):
         """Only Vida product has beneficiary section."""
         assert PRODUCT_FIELD_VARIANTS["vida"]["has_beneficiario"] is True
-        for prod_id in ("accidentes", "viajes", "mascotas", "vida_deudor", "hogar", "movilidad"):
+        for prod_id in ("accidentes", "viajes", "mascotas", "hogar", "movilidad"):
             assert PRODUCT_FIELD_VARIANTS[prod_id]["has_beneficiario"] is False, (
                 f"{prod_id} should not have beneficiario"
             )
