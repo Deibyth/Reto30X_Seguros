@@ -30,6 +30,7 @@ TOOL_DOMAINS: dict[str, str] = {
     "recommend_insurance": "insurance",
     "quote_insurance": "insurance",
     "create_policy": "insurance",
+    "set_category": "insurance",
 }
 
 
@@ -50,6 +51,7 @@ class ToolBridge:
     # Per-tool mapping: only inject session_id into tools that need it.
     HIDDEN_PARAMS: dict[str, set[str]] = {
         "save_form_field": {"session_id"},
+        "set_category": {"session_id"},
     }
 
     def __init__(self, mcp_instance: FastMCP) -> None:
