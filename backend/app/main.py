@@ -66,7 +66,23 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     logger.info("Database tables created successfully")
 
-    # 3. Import FastMCP server (registers domain tools)
+    # 3. Initialize SegmentDataService (loads affiliate CSV dataset)
+    from app.services.segment_data import SegmentDataService
+
+    segment_service = SegmentDataService()
+    segment_service.load()
+    SegmentDataService._set_instance(segment_service)
+    app.state.segment_data_service = segment_service
+    if segment_service.is_loaded():
+        logger.info(
+            "SegmentDataService loaded with %d categories, %d segments",
+            len(segment_service.get_categories()),
+            len(segment_service.get_segments()),
+        )
+    else:
+        logger.info("SegmentDataService: running without affiliate dataset")
+
+    # 4. Import FastMCP server (registers domain tools)
     from app.tools.mcp_server import mcp  # noqa: F401
 
     logger.info("FastMCP server '%s' initialized", "Proteccion360")
@@ -111,7 +127,17 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.chat_service = None
         logger.warning("ChatService not initialized — chat will use echo fallback")
 
-    # 7. Initialize AnalyticsService (dashboard data aggregation)
+    # 7. Initialize OutboundService (proactive messaging)
+    from app.services.outbound_service import OutboundService
+
+    outbound_service = OutboundService(
+        session_maker=db.async_session_maker,
+        ai_client=ai_client,
+    )
+    app.state.outbound_service = outbound_service
+    logger.info("OutboundService initialized")
+
+    # 8. Initialize AnalyticsService (dashboard data aggregation)
     from app.services.analytics import AnalyticsService
 
     if db.async_session_maker is not None:
@@ -122,8 +148,25 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.analytics_service = None
         logger.warning("AnalyticsService not initialized — no database session maker")
 
+    # 9. Start outbound scheduler (proactive messaging)
+    if db.async_session_maker is not None:
+        from app.scheduler import OutboundScheduler
+
+        scheduler = OutboundScheduler(
+            outbound_service=app.state.outbound_service,
+        )
+        scheduler.start()
+        app.state.outbound_scheduler = scheduler
+        logger.info("Outbound scheduler started")
+    else:
+        app.state.outbound_scheduler = None
+        logger.warning("Outbound scheduler not started — no database session maker")
+
     yield
     # --- Shutdown ---
+    scheduler = getattr(app.state, "outbound_scheduler", None)
+    if scheduler is not None:
+        await scheduler.stop()
     await dispose_engine()
     logger.info("Application shut down gracefully")
 
@@ -174,10 +217,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     from app.routers.analytics import router as analytics_router
     from app.routers.chat import router as chat_router
     from app.routers.health import router as health_router
+    from app.routers.outbound import router as outbound_router
 
     app.include_router(health_router)
     app.include_router(chat_router)
     app.include_router(analytics_router)
+    app.include_router(outbound_router)
 
     return app
 

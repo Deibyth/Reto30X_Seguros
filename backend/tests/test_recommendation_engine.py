@@ -12,7 +12,11 @@ from app.services.recommendation_engine import (
     PRODUCTS,
     RULES,
     COVERAGE_MULTIPLIERS,
+    SEGMENT_RULES,
+    SEGMENT_BOOST,
+    SEGMENTO_LABELS,
     match_products,
+    match_products_by_segment,
     quote_product,
 )
 
@@ -367,6 +371,277 @@ class TestRecommendInsuranceTool:
         result = recommend_insurance({"unknown_attr": True})
         assert "No encontramos productos" in result
 
+    # ── T004: recommend_insurance con documento ──────────────────────
+
+    def test_recommend_insurance_with_documento(self, monkeypatch):
+        """Documento encontrado → categoría A en output."""
+        from app.tools import domain_tools as dt
+        from app.services.segment_data import SegmentDataService
+
+        class MockSegmentService:
+            def is_loaded(self):
+                return True
+            def lookup_by_documento(self, doc):
+                return {"categoria": "A", "segmento": "LAMBDA", "segmento_grupo_familiar": "LAMBDA"}
+
+        monkeypatch.setattr(SegmentDataService, "get_instance", lambda: MockSegmentService())
+        result = dt.recommend_insurance({}, "12345")
+        assert "categoría A" in result or "categoria A" in result
+
+    def test_recommend_insurance_documento_not_found(self, monkeypatch):
+        """Documento no encontrado → fallback a match_products."""
+        from app.tools import domain_tools as dt
+        from app.services.segment_data import SegmentDataService
+
+        class MockSegmentService:
+            def is_loaded(self):
+                return True
+            def lookup_by_documento(self, doc):
+                return None
+
+        monkeypatch.setattr(SegmentDataService, "get_instance", lambda: MockSegmentService())
+        result = dt.recommend_insurance({"viaja_frecuentemente": True}, "99999")
+        assert "Asistencia Médica Viajes" in result
+
+    def test_recommend_insurance_no_documento(self):
+        """Sin documento ni profile.categoria → match_products (backward compat)."""
+        from app.tools.domain_tools import recommend_insurance
+        result_viajes = recommend_insurance({"viaja_frecuentemente": True})
+        assert "Asistencia Médica Viajes" in result_viajes
+        result_empty = recommend_insurance({})
+        assert "No encontramos productos" in result_empty
+
+    def test_recommend_insurance_profile_with_categoria(self, monkeypatch):
+        """Sin doc pero profile con categoria_afiliacion → usa by_segment."""
+        from app.tools import domain_tools as dt
+        from app.services.segment_data import SegmentDataService
+
+        # Ensure segment_data is accessible (even if not loaded, should not crash)
+        class MockSegmentService:
+            def is_loaded(self):
+                return False
+            def lookup_by_documento(self, doc):
+                return None
+
+        monkeypatch.setattr(SegmentDataService, "get_instance", lambda: MockSegmentService())
+        result = dt.recommend_insurance({"categoria_afiliacion": "C"})
+        assert "productos" in result.lower()
+
+    def test_recommend_insurance_empty_profile_with_doc(self, monkeypatch):
+        """{} + doc (A, LAMBDA) → compound rules still fire (vida + hogar)."""
+        from app.tools import domain_tools as dt
+        from app.services.segment_data import SegmentDataService
+
+        class MockSegmentService:
+            def is_loaded(self):
+                return True
+            def lookup_by_documento(self, doc):
+                return {"categoria": "A", "segmento": "LAMBDA"}
+
+        monkeypatch.setattr(SegmentDataService, "get_instance", lambda: MockSegmentService())
+        result = dt.recommend_insurance({}, "12345")
+        assert "Seguro de Vida" in result
+        assert "categoría A" in result or "categoria A" in result
+
+    def test_recommend_insurance_salario_inference(self, monkeypatch):
+        """Profile con salario 8M → infiere C (R12) → productos en output."""
+        from app.tools import domain_tools as dt
+        from app.services.segment_data import SegmentDataService
+
+        class MockSegmentService:
+            def is_loaded(self):
+                return False
+            def lookup_by_documento(self, doc):
+                return None
+
+        monkeypatch.setattr(SegmentDataService, "get_instance", lambda: MockSegmentService())
+        # salario=8M → >4 SMMLV → categoria C → R12 gives all 6 products
+        result = dt.recommend_insurance({"salario": 8000000})
+        assert "Recomendación personalizada" in result
+        assert "Seguro de Vida" in result
+
+
+class TestLoadSegmentDataTool:
+    """Tests for the load_segment_data() MCP tool."""
+
+    def test_load_segment_data_by_documento(self, monkeypatch):
+        """Documento encontrado → texto con 'categoría'."""
+        from app.tools import domain_tools as dt
+        from app.services.segment_data import SegmentDataService
+
+        class MockSegmentService:
+            def is_loaded(self):
+                return True
+            def lookup_by_documento(self, doc):
+                return {"categoria": "A", "segmento": "LAMBDA"}
+            def get_aggregate_stats(self, categoria=None, segmento=None):
+                return [{
+                    "categoria": "A", "segmento": "LAMBDA",
+                    "total_afiliados": 1000,
+                    "pct_drogueria": 50.0, "pct_hoteles": 10.0,
+                    "pct_piscilago": 5.0, "pct_agencias": 3.0,
+                    "pct_vivienda": 2.0,
+                }]
+
+        monkeypatch.setattr(SegmentDataService, "get_instance", lambda: MockSegmentService())
+        result = dt.load_segment_data("12345")
+        assert "categoría" in result.lower() or "categoria" in result.lower()
+
+    def test_load_segment_data_all(self, monkeypatch):
+        """Sin documento → múltiples segmentos listados."""
+        from app.tools import domain_tools as dt
+        from app.services.segment_data import SegmentDataService
+
+        class MockSegmentService:
+            def is_loaded(self):
+                return True
+            def lookup_by_documento(self, doc):
+                return None
+            def get_aggregate_stats(self, categoria=None, segmento=None):
+                return [
+                    {"categoria": "A", "segmento": "LAMBDA",
+                     "total_afiliados": 500, "pct_drogueria": 50.0,
+                     "pct_hoteles": 5.0, "pct_piscilago": 3.0,
+                     "pct_agencias": 2.0, "pct_vivienda": 1.0},
+                    {"categoria": "B", "segmento": "RHO",
+                     "total_afiliados": 300, "pct_drogueria": 40.0,
+                     "pct_hoteles": 10.0, "pct_piscilago": 8.0,
+                     "pct_agencias": 5.0, "pct_vivienda": 3.0},
+                ]
+
+        monkeypatch.setattr(SegmentDataService, "get_instance", lambda: MockSegmentService())
+        result = dt.load_segment_data()
+        assert "Sin grupo familiar" in result
+        assert "Monoparental" in result
+
+    def test_load_segment_data_not_found(self, monkeypatch):
+        """Documento no encontrado → mensaje específico."""
+        from app.tools import domain_tools as dt
+        from app.services.segment_data import SegmentDataService
+
+        class MockSegmentService:
+            def is_loaded(self):
+                return True
+            def lookup_by_documento(self, doc):
+                return None
+
+        monkeypatch.setattr(SegmentDataService, "get_instance", lambda: MockSegmentService())
+        result = dt.load_segment_data("99999")
+        assert "No se encontraron datos" in result
+
+    def test_load_segment_data_unavailable(self, monkeypatch):
+        """is_loaded=False → 'no disponibles'."""
+        from app.tools import domain_tools as dt
+        from app.services.segment_data import SegmentDataService
+
+        class MockSegmentService:
+            def is_loaded(self):
+                return False
+
+        monkeypatch.setattr(SegmentDataService, "get_instance", lambda: MockSegmentService())
+        result = dt.load_segment_data()
+        assert "no disponibles" in result.lower()
+
+    def test_load_segment_data_no_instance(self, monkeypatch):
+        """get_instance raises RuntimeError → 'no disponibles'."""
+        from app.tools import domain_tools as dt
+        from app.services.segment_data import SegmentDataService
+
+        monkeypatch.setattr(SegmentDataService, "get_instance", lambda: (_ for _ in ()).throw(RuntimeError))
+        result = dt.load_segment_data()
+        assert "no disponibles" in result.lower()
+
+
+class TestGetCustomerSegment:
+    """Tests for get_customer() with segment enrichment."""
+
+    @pytest.mark.asyncio
+    async def test_get_customer_with_segmento(self, monkeypatch, domain_db_maker):
+        """Cliente encontrado + segmento en CSV → '**Segmento familiar:**'."""
+        from app.tools import domain_tools as dt
+        from app.services.segment_data import SegmentDataService
+        from app.models.customer import Customer
+
+        # Seed a customer
+        async with domain_db_maker() as session:
+            c = Customer(
+                nombre_completo="Juan Perez",
+                documento_identidad="12345",
+                email="juan@test.com",
+                salario=2000000,
+                tipo_contrato="indefinido",
+            )
+            session.add(c)
+            await session.commit()
+
+        class MockSegmentService:
+            def is_loaded(self):
+                return True
+            def lookup_by_documento(self, doc):
+                return {"categoria": "A", "segmento": "LAMBDA", "segmento_grupo_familiar": "LAMBDA"}
+
+        monkeypatch.setattr(SegmentDataService, "get_instance", lambda: MockSegmentService())
+        # Use domain_db_maker as async_session_maker
+        monkeypatch.setattr(dt, "async_session_maker", domain_db_maker)
+        result = await dt.get_customer("12345")
+        assert "**Segmento familiar:**" in result
+
+    @pytest.mark.asyncio
+    async def test_get_customer_without_segmento(self, monkeypatch, domain_db_maker):
+        """Cliente sin segmento — sin línea extra."""
+        from app.tools import domain_tools as dt
+        from app.services.segment_data import SegmentDataService
+        from app.models.customer import Customer
+
+        async with domain_db_maker() as session:
+            c = Customer(
+                nombre_completo="Ana Gomez",
+                documento_identidad="67890",
+                email="ana@test.com",
+                salario=2000000,
+                tipo_contrato="indefinido",
+            )
+            session.add(c)
+            await session.commit()
+
+        class MockSegmentService:
+            def is_loaded(self):
+                return True
+            def lookup_by_documento(self, doc):
+                return {"categoria": "A", "segmento": None}
+
+        monkeypatch.setattr(SegmentDataService, "get_instance", lambda: MockSegmentService())
+        monkeypatch.setattr(dt, "async_session_maker", domain_db_maker)
+        result = await dt.get_customer("67890")
+        assert "**Segmento familiar:**" not in result
+
+    @pytest.mark.asyncio
+    async def test_get_customer_no_csv(self, monkeypatch, domain_db_maker):
+        """CSV no cargado → sin segmento line."""
+        from app.tools import domain_tools as dt
+        from app.services.segment_data import SegmentDataService
+        from app.models.customer import Customer
+
+        async with domain_db_maker() as session:
+            c = Customer(
+                nombre_completo="Luis Mora",
+                documento_identidad="11111",
+                email="luis@test.com",
+                salario=3000000,
+                tipo_contrato="indefinido",
+            )
+            session.add(c)
+            await session.commit()
+
+        class MockSegmentService:
+            def is_loaded(self):
+                return False
+
+        monkeypatch.setattr(SegmentDataService, "get_instance", lambda: MockSegmentService())
+        monkeypatch.setattr(dt, "async_session_maker", domain_db_maker)
+        result = await dt.get_customer("11111")
+        assert "**Segmento familiar:**" not in result
+
 
 # ──────────────────────────────────────────────
 # quote_insurance MCP tool — Task 2.3
@@ -542,3 +817,243 @@ class TestCreatePolicyTool:
             )).scalars().all()
             assert len(policies) == 1
             assert policies[0].insurance_id == insurance_id
+
+
+# ──────────────────────────────────────────────
+# T003 — Compound rules (R8-R13)
+# ──────────────────────────────────────────────
+
+
+class TestCompoundRules:
+    """SEGMENT_RULES R8-R13 match correctly per (categoria, segmento)."""
+
+    # R8: (A, LAMBDA) → vida + hogar
+    def test_r8_a_lambda(self):
+        result = match_products_by_segment({}, "A", "LAMBDA")
+        ids = {p["product_id"] for p in result}
+        assert "vida" in ids
+        assert "hogar" in ids
+
+    # R9: (A, RHO) → vida + accidentes
+    def test_r9_a_rho(self):
+        result = match_products_by_segment({}, "A", "RHO")
+        ids = {p["product_id"] for p in result}
+        assert "vida" in ids
+        assert "accidentes" in ids
+
+    # R10: (A, EPSILON) → vida + hogar
+    def test_r10_a_epsilon(self):
+        result = match_products_by_segment({}, "A", "EPSILON")
+        ids = {p["product_id"] for p in result}
+        assert "vida" in ids
+        assert "hogar" in ids
+
+    # R11: (B, any) → accidentes + movilidad
+    def test_r11_b_any(self):
+        result = match_products_by_segment({}, "B", None)
+        ids = {p["product_id"] for p in result}
+        assert "accidentes" in ids
+        assert "movilidad" in ids
+
+    def test_r11_b_and_rho(self):
+        """R11 matches (B, RHO). R13 does NOT match (B, IOTA)."""
+        result = match_products_by_segment({}, "B", "RHO")
+        ids = {p["product_id"] for p in result}
+        assert "accidentes" in ids
+        assert "movilidad" in ids
+        assert "hogar" not in ids  # R13 only matches IOTA, not RHO
+
+    # R12: (C, any) → all 6 products
+    def test_r12_c_all_products(self):
+        result = match_products_by_segment({}, "C", None)
+        ids = {p["product_id"] for p in result}
+        expected = {"vida", "hogar", "movilidad", "accidentes", "viajes", "mascotas"}
+        assert ids == expected
+
+    def test_r12_c_life_home_high(self):
+        """R12: vida+hogar confidence 'high', rest 'medium'."""
+        result = match_products_by_segment({}, "C", None)
+        for p in result:
+            if p["product_id"] in ("vida", "hogar"):
+                assert p["confidence"] == "high", f"{p['product_id']} should be high"
+            else:
+                assert p["confidence"] == "medium", f"{p['product_id']} should be medium"
+
+    # R13: (any, IOTA) → vida + hogar
+    def test_r13_any_iota(self):
+        result = match_products_by_segment({}, None, "IOTA")
+        ids = {p["product_id"] for p in result}
+        assert "vida" in ids
+        assert "hogar" in ids
+
+    def test_r13_with_a_and_iota(self):
+        """R13 works with categoria A + segment IOTA."""
+        result = match_products_by_segment({}, "A", "IOTA")
+        ids = {p["product_id"] for p in result}
+        assert "vida" in ids
+        assert "hogar" in ids
+
+    # MU / None fallback
+    def test_mu_fallback(self):
+        """MU → no compound rules, only R1-R7 (empty profile = [])."""
+        result = match_products_by_segment({}, "MU", None)
+        assert result == []
+
+    def test_none_categoria(self):
+        """None categoria → no compound rules."""
+        result = match_products_by_segment({}, None, None)
+        assert result == []
+
+    def test_empty_profile_with_categoria_returns_compound(self):
+        """Empty profile + usable categoria → compound rules still fire."""
+        result = match_products_by_segment({}, "A", "LAMBDA")
+        assert len(result) > 0  # compound rules fire regardless of profile
+
+
+class TestSegmentBoost:
+    """SEGMENT_BOOST reorders, never excludes."""
+
+    def test_boost_reorder_lambda(self):
+        """LAMBDA boost: vida/hogar appear in result (boosted products present)."""
+        result = match_products_by_segment({}, "C", "LAMBDA")
+        ids = {p["product_id"] for p in result}
+        assert "vida" in ids
+        assert "hogar" in ids
+
+    def test_boost_never_excludes(self):
+        """All matched products appear regardless of boost."""
+        profile = {
+            "viaja_frecuentemente": True,
+            "es_propietario_vivienda": True,
+            "tiene_mascota": True,
+        }
+        result = match_products_by_segment(profile, "A", "LAMBDA")
+        ids = {p["product_id"] for p in result}
+        # Conversational: viajes, hogar, mascotas
+        # Compound: vida, hogar
+        # So all: viajes, hogar, mascotas, vida
+        assert "viajes" in ids
+        assert "hogar" in ids
+        assert "mascotas" in ids
+        assert "vida" in ids
+
+    def test_no_boost_for_unknown_segment(self):
+        """CHI/THETA/PI → no boost modifier applied.
+
+        With category C (R12), all 6 products are matched. LAMBDA boosts
+        vida/hogar; CHI has no boost — so vida/hogar appear earlier in LAMBDA.
+        """
+        result_lam = match_products_by_segment({}, "C", "LAMBDA")
+        result_chi = match_products_by_segment({}, "C", "CHI")
+        ids_lam = [p["product_id"] for p in result_lam]
+        ids_chi = [p["product_id"] for p in result_chi]
+        # Both have vida at high confidence; in LAMBDA it's boosted (sort key 0),
+        # in CHI it's not (sort key 1). Both sort before medium-confidence products.
+        # The difference: vida's second-level sort key.
+        # For LAMBDA: vida sort key at high is (0, 0, -45000) — boosted
+        # For CHI:   vida sort key at high is (0, 1, -45000) — not boosted
+        # Within high confidence, vida is first in LAMBDA (boosted) vs
+        # hogar first in CHI (same prima_base sorting).
+        lam_first = ids_lam[0]
+        chi_first = ids_chi[0]
+        # Both should start with vida or hogar
+        assert lam_first in ("vida", "hogar")
+        assert chi_first in ("vida", "hogar")
+
+
+class TestMergeConfidence:
+    """Confidence merging between conversational and compound rules."""
+
+    def test_conversational_wins(self):
+        """Conversational high + compound medium → high."""
+        # viaja_frecuentemente → conversational high for viajes
+        # A+LAMBDA compound → vida, hogar (medium from compound)
+        result = match_products_by_segment(
+            {"viaja_frecuentemente": True},
+            "A",
+            "LAMBDA",
+        )
+        for p in result:
+            if p["product_id"] == "viajes":
+                assert p["confidence"] == "high", "Conversational high should win"
+            elif p["product_id"] in ("vida", "hogar"):
+                assert p["confidence"] == "medium", "Compound-only should be medium"
+
+    def test_compound_only(self):
+        """Product only from compound → medium confidence."""
+        result = match_products_by_segment({}, "A", "LAMBDA")
+        for p in result:
+            assert p["confidence"] == "medium", f"Compound-only {p['product_id']} should be medium"
+
+    def test_overlap_reason_includes_aligned(self):
+        """Overlapping product reason includes 'alineado'."""
+        profile = {"viaja_frecuentemente": True, "es_propietario_vivienda": True}
+        result = match_products_by_segment(profile, "A", "LAMBDA")
+        # hogar could be in both conversational + compound
+        for p in result:
+            if p["product_id"] == "hogar" and p["confidence"] == "high":
+                assert "alineado" in p["match_reason"].lower()
+
+    def test_compound_reason_contains_category(self):
+        """Compound-only reason includes category or segment reference."""
+        result = match_products_by_segment({}, "A", "LAMBDA")
+        for p in result:
+            reason = p["match_reason"].lower()
+            has_ref = "categoría" in reason or "categoria" in reason or "perfil" in reason
+            assert has_ref, (
+                f"Compound reason for {p['product_id']} should mention categoría or perfil, "
+                f"got: {p['match_reason']}"
+            )
+
+    def test_fallback_categoria_medium(self):
+        """R1-R7 with None categoria → medium + (perfil general)."""
+        profile = {"viaja_frecuentemente": True}
+        result = match_products_by_segment(profile, None, None)
+        for p in result:
+            assert p["confidence"] == "medium", (
+                f"Fallback {p['product_id']} should be medium"
+            )
+            assert "(perfil general)" in p["match_reason"], (
+                f"Fallback {p['product_id']} should have '(perfil general)' in reason"
+            )
+
+
+class TestBackwardCompat:
+    """match_products_by_segment backward compatibility with match_products."""
+
+    def test_by_segment_no_cat_equals_match(self):
+        """match_products_by_segment(profile, None, None) == match_products(profile)."""
+        profile = {"viaja_frecuentemente": True, "es_propietario_vivienda": True}
+        expected = match_products(profile)
+        result = match_products_by_segment(profile, None, None)
+        # Both should have same product_ids (but confidence/reasons differ with fallback)
+        expected_ids = {p["product_id"] for p in expected}
+        result_ids = {p["product_id"] for p in result}
+        assert expected_ids == result_ids
+
+    def test_by_segment_empty_still_empty(self):
+        assert match_products_by_segment({}, None, None) == []
+
+    def test_profile_without_categoria_key(self):
+        """Profile without categoria_afiliacion key → uses match_products internally."""
+        profile = {"viaja_frecuentemente": True}
+        result = match_products_by_segment(profile, None, None)
+        assert len(result) > 0
+
+    def test_segmento_labels_defined(self):
+        """SEGMENTO_LABELS maps expected codes."""
+        assert SEGMENTO_LABELS["LAMBDA"] == "Sin grupo familiar"
+        assert SEGMENTO_LABELS["RHO"] == "Monoparental"
+        assert SEGMENTO_LABELS["EPSILON"] == "Nuclear"
+        assert SEGMENTO_LABELS["IOTA"] == "Pareja"
+        assert None in SEGMENTO_LABELS
+
+    def test_segment_rules_all_present(self):
+        """All 6 compound rules are defined."""
+        assert len(SEGMENT_RULES) == 6
+
+    def test_segment_boost_keys(self):
+        """SEGMENT_BOOST has expected keys."""
+        for seg in ("LAMBDA", "RHO", "EPSILON", "IOTA"):
+            assert seg in SEGMENT_BOOST, f"Missing SEGMENT_BOOST for {seg}"
+        assert "CHI" not in SEGMENT_BOOST

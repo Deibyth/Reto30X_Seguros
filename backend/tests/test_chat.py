@@ -461,7 +461,247 @@ class TestDomainToolFiltering:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.asyncio
+# ---------------------------------------------------------------------------
+# T005: Profile pre-seed + anonymous salary flow
+# ---------------------------------------------------------------------------
+
+class MockSegmentDataService:
+    """Minimal mock for SegmentDataService used in pre-seed tests."""
+
+    def __init__(self, result: dict | None = None):
+        self._result = result
+
+    def is_loaded(self):
+        return True
+
+    def lookup_by_documento(self, documento: str):
+        return self._result
+
+
+def _patch_segment_svc(mock_svc):
+    """Replace SegmentDataService.get_instance with a classmethod returning mock_svc."""
+    import app.services.segment_data as _sd
+
+    _sd.SegmentDataService.get_instance = classmethod(lambda cls: mock_svc)
+
+
+@ pytest.mark.asyncio
+async def test_profile_preseed_on_get_customer(db_engine):
+    """get_customer tool call → insurance_profile populated from segment data."""
+    _patch_segment_svc(MockSegmentDataService({
+        "documento": "123",
+        "categoria": "A",
+        "segmento": "LAMBDA",
+    }))
+
+    maker = async_sessionmaker(db_engine, expire_on_commit=False)
+    service = ChatService(
+        session_maker=maker,
+        ai_client=MagicMock(),
+        tool_bridge=MagicMock(),
+    )
+    session, _ = await service.get_or_create_session(session_id=None)
+    session.estado_actual = "perfilando"
+    session.insurance_profile = {}
+    async with maker() as db:
+        await db.merge(session)
+        await db.commit()
+
+    await service._update_session_state(
+        session.id,
+        tool_calls=[MockToolCall("get_customer", {"documento_identidad": "123"})],
+    )
+
+    async with maker() as db:
+        updated = await db.get(Session, session.id)
+    assert updated is not None
+    assert updated.insurance_profile is not None
+    assert updated.insurance_profile.get("categoria_afiliacion") == "A"
+    assert updated.insurance_profile.get("segmento_grupo_familiar") == "LAMBDA"
+
+
+@ pytest.mark.asyncio
+async def test_profile_preseed_doc_not_found(db_engine):
+    """get_customer with documento not in dataset → insurance_profile unchanged."""
+    _patch_segment_svc(MockSegmentDataService(None))  # lookup returns None
+
+    maker = async_sessionmaker(db_engine, expire_on_commit=False)
+    service = ChatService(
+        session_maker=maker,
+        ai_client=MagicMock(),
+        tool_bridge=MagicMock(),
+    )
+    session, _ = await service.get_or_create_session(session_id=None)
+    session.estado_actual = "perfilando"
+    session.insurance_profile = {}
+    async with maker() as db:
+        await db.merge(session)
+        await db.commit()
+
+    await service._update_session_state(
+        session.id,
+        tool_calls=[MockToolCall("get_customer", {"documento_identidad": "NOT_FOUND"})],
+    )
+
+    async with maker() as db:
+        updated = await db.get(Session, session.id)
+    assert updated is not None
+    # insurance_profile should still be empty dict
+    assert updated.insurance_profile == {}
+
+
+@ pytest.mark.asyncio
+async def test_profile_preseed_preserves_existing(db_engine):
+    """Existing keys in insurance_profile are preserved when pre-seeding."""
+    _patch_segment_svc(MockSegmentDataService({
+        "documento": "456",
+        "categoria": "B",
+        "segmento": "RHO",
+    }))
+
+    maker = async_sessionmaker(db_engine, expire_on_commit=False)
+    service = ChatService(
+        session_maker=maker,
+        ai_client=MagicMock(),
+        tool_bridge=MagicMock(),
+    )
+    session, _ = await service.get_or_create_session(session_id=None)
+    session.estado_actual = "perfilando"
+    session.insurance_profile = {"product_context": "vida", "edad": 35}
+    async with maker() as db:
+        await db.merge(session)
+        await db.commit()
+
+    await service._update_session_state(
+        session.id,
+        tool_calls=[MockToolCall("get_customer", {"documento_identidad": "456"})],
+    )
+
+    async with maker() as db:
+        updated = await db.get(Session, session.id)
+    assert updated is not None
+    assert updated.insurance_profile is not None
+    # Existing keys preserved
+    assert updated.insurance_profile.get("product_context") == "vida"
+    assert updated.insurance_profile.get("edad") == 35
+    # New keys added
+    assert updated.insurance_profile.get("categoria_afiliacion") == "B"
+    assert updated.insurance_profile.get("segmento_grupo_familiar") == "RHO"
+
+
+@ pytest.mark.asyncio
+async def test_profile_preseed_no_get_customer(db_engine):
+    """Tool call that is NOT get_customer → profile not modified."""
+    _patch_segment_svc(MockSegmentDataService({"categoria": "A"}))
+
+    maker = async_sessionmaker(db_engine, expire_on_commit=False)
+    service = ChatService(
+        session_maker=maker,
+        ai_client=MagicMock(),
+        tool_bridge=MagicMock(),
+    )
+    session, _ = await service.get_or_create_session(session_id=None)
+    session.estado_actual = "perfilando"
+    session.insurance_profile = {}
+    async with maker() as db:
+        await db.merge(session)
+        await db.commit()
+
+    await service._update_session_state(
+        session.id,
+        tool_calls=[MockToolCall("get_products", {"tipo": "credito"})],
+    )
+
+    async with maker() as db:
+        updated = await db.get(Session, session.id)
+    assert updated is not None
+    assert updated.insurance_profile == {}
+
+
+class TestAnonymousSalaryProfiling:
+    def _make_session(self, insurance_profile=None):
+        return Session(
+            id="test-id",
+            estado_actual="perfilando",
+            insurance_profile=insurance_profile,
+            campos_diligenciados={},
+            activa=True,
+        )
+
+    def _build_prompt(self, session):
+        service = ChatService(
+            session_maker=MagicMock(),
+            ai_client=MagicMock(),
+            tool_bridge=MagicMock(),
+        )
+        return service._build_system_prompt(session)
+
+    def test_anonymous_salary_in_profiling(self):
+        """Without categoria_afiliacion, system prompt includes salary flow."""
+        session = self._make_session(insurance_profile={})
+        prompt = self._build_prompt(session)
+        assert "PERFILACIÓN SIN DOCUMENTO" in prompt
+        assert "rango salarial" in prompt
+        assert "set_category" in prompt
+
+    def test_no_anonymous_salary_when_categoria_present(self):
+        """When profile has categoria_afiliacion, salary section is NOT included."""
+        session = self._make_session(
+            insurance_profile={"categoria_afiliacion": "A"}
+        )
+        prompt = self._build_prompt(session)
+        assert "PERFILACIÓN SIN DOCUMENTO" not in prompt
+
+
+@ pytest.mark.asyncio
+async def test_set_category_tool_updates_profile(db_engine, monkeypatch):
+    """set_category tool call updates insurance_profile.categoria_afiliacion."""
+    from app.tools import domain_tools
+
+    maker = async_sessionmaker(db_engine, expire_on_commit=False)
+    monkeypatch.setattr(domain_tools, "async_session_maker", maker)
+
+    # Create a session with no categoria
+    async with maker() as db:
+        session = Session(
+            id="set-cat-test",
+            estado_actual="perfilando",
+            insurance_profile={},
+            activa=True,
+        )
+        db.add(session)
+        await db.commit()
+
+    # Call set_category directly
+    result = await domain_tools.set_category(
+        session_id="set-cat-test",
+        categoria="B",
+    )
+
+    assert "Categoría B registrada" in result
+
+    async with maker() as db:
+        updated = await db.get(Session, "set-cat-test")
+    assert updated is not None
+    assert updated.insurance_profile is not None
+    assert updated.insurance_profile.get("categoria_afiliacion") == "B"
+
+
+@ pytest.mark.asyncio
+async def test_set_category_invalid_value(db_engine):
+    """set_category with invalid category returns error."""
+    from app.tools import domain_tools
+
+    result = await domain_tools.set_category(
+        session_id="any-id",
+        categoria="INVALID",
+    )
+    assert "Error" in result
+    assert "INVALID" in result
+    assert "A, B o C" in result
+
+
+@ pytest.mark.asyncio
 async def test_update_session_state_insurance_transitions(db_engine):
     """Insurance state transitions work correctly."""
     maker = async_sessionmaker(db_engine, expire_on_commit=False)

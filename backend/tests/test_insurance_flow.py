@@ -225,7 +225,9 @@ class TestRecommendInsuranceErrorPaths:
         result = domain_tools.recommend_insurance({"unknown_attr": "value"})
         assert "No encontramos productos" in result
 
-    def test_newborn_young_single_returns_no_match(self):
-        """Profile with edad=0 should not match R2 (18-35)."""
+    def test_newborn_young_single_returns_catalog_products(self):
+        """Profile with edad=0 infers segmento_vida=01 → catalog products for Joven solo."""
         result = domain_tools.recommend_insurance({"edad": 0, "estado_civil": "soltero"})
-        assert "No encontramos productos" in result
+        # Should return catalog products for Joven solo (01), not empty
+        assert "Productos recomendados" in result
+        assert "Joven solo" in result or "Bicicleta" in result

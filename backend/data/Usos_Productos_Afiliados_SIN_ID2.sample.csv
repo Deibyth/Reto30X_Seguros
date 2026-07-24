@@ -1,0 +1,9 @@
+# Origen: Dataset anonimizado de Usos_Productos_Afiliados (~500K registros) de Colsubsidio.
+# Columnas requeridas: documento,categoria,segmento_grupo_familiar,edad,prima_promedio,
+#   pct_vida,pct_accidentes,pct_viajes,pct_mascotas,pct_hogar,pct_movilidad,pct_vida_deudor
+# Normalización:
+#   - categoria: derivada de la columna CATEGORIA del dataset original (SIGMA→A, PI→B, ZETA→C, MU→None)
+#   - segmento_grupo_familiar: copiado textual de SEGMENTO_GRUPO_FAMILIAR
+#   - prima_promedio: promedio del campo VALOR_PRIMA_PROMEDIO_PAGO agrupado por (categoria, segmento, edad)
+#   - pct_*: porcentaje de afiliados en ese segmento que consumen cada producto
+documento,categoria,segmento_grupo_familiar,edad,prima_promedio,pct_vida,pct_accidentes,pct_viajes,pct_mascotas,pct_hogar,pct_movilidad,pct_vida_deudor

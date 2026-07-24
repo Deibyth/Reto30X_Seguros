@@ -22,7 +22,13 @@ from app.models.policy import Policy
 from app.models.product import Product
 from app.models.session import Session
 from app.schemas.credit_form import FormSchema
-from app.services.recommendation_engine import match_products, quote_product
+from app.services.recommendation_engine import (
+    SEGMENTO_LABELS,
+    derive_segmento_vida,
+    match_products,
+    match_products_by_segment,
+    quote_product,
+)
 from app.tools.mcp_server import mcp
 
 logger = logging.getLogger(__name__)
@@ -111,7 +117,7 @@ async def get_customer(documento_identidad: str) -> str:
             customer.salario
         )
 
-        return (
+        result = (
             f"**Cliente:** {customer.nombre_completo}\n"
             f"**Documento:** {customer.documento_identidad}\n"
             f"**Email:** {customer.email or 'No registrado'}\n"
@@ -121,6 +127,110 @@ async def get_customer(documento_identidad: str) -> str:
             f"**Antigüedad:** {customer.antiguedad_meses or 0} meses\n"
             f"**Score crediticio:** {customer.score_crediticio or 'No disponible'}"
         )
+
+        # Append segment info if available from CSV dataset
+        from app.services.segment_data import SegmentDataService
+
+        try:
+            segment_svc = SegmentDataService.get_instance()
+        except RuntimeError:
+            segment_svc = None
+        if segment_svc and segment_svc.is_loaded():
+            info = segment_svc.lookup_by_documento(documento_identidad)
+            if info and info.get("segmento"):
+                seg_label = SEGMENTO_LABELS.get(info["segmento"], "No especificado")
+                result += f"\n**Segmento familiar:** {seg_label}"
+
+        return result
+
+
+@mcp.tool()
+def load_segment_data(documento: str | None = None) -> str:
+    """Return aggregate product consumption patterns per segment.
+
+    When ``documento`` is provided, returns stats for that member's segment.
+    When omitted, returns a summary of all segments sorted by total affiliates.
+
+    Parameters
+    ----------
+    documento : str | None, optional
+        Identity document number to look up their segment stats.
+    """
+    from app.services.segment_data import SegmentDataService
+
+    try:
+        segment_svc = SegmentDataService.get_instance()
+    except RuntimeError:
+        return "Datos de segmentación no disponibles. El archivo CSV no fue cargado."
+
+    if not segment_svc.is_loaded():
+        return "Datos de segmentación no disponibles. El archivo CSV no fue cargado."
+
+    # Lookup by documento
+    if documento:
+        info = segment_svc.lookup_by_documento(documento)
+        if not info:
+            return f"No se encontraron datos para el documento '{documento}'."
+
+        cat = info.get("categoria") or "N/A"
+        seg = info.get("segmento")
+        seg_label = SEGMENTO_LABELS.get(seg, "No especificado") if seg else "No disponible"
+        stats = segment_svc.get_aggregate_stats(
+            categoria=info.get("categoria"),
+            segmento=info.get("segmento"),
+        )
+
+        if not stats:
+            return (
+                f"El segmento {seg_label} (categoría {cat}) no tiene datos "
+                f"de consumo agregados."
+            )
+
+        s = stats[0]
+        top_products = _top_products_text(s)
+        prima = s.get("prima_promedio")
+        prima_text = f" Prima promedio: ${prima:,.0f}." if prima else ""
+        return (
+            f"El segmento {seg_label} (categoría {cat}) suele comprar: "
+            f"{top_products}.{prima_text}"
+        )
+
+    # Summary of all segments
+    all_stats = segment_svc.get_aggregate_stats()
+    if not all_stats:
+        return "No hay datos de segmentación disponibles."
+
+    # Sort by total_afiliados desc
+    all_stats.sort(key=lambda x: x["total_afiliados"], reverse=True)
+
+    lines = ["**Distribución por segmento:**\n"]
+    lines.append("| Segmento | Categoría | Afiliados | Top 3 Productos | Prima Prom. |")
+    lines.append("|----------|-----------|-----------|-----------------|-------------|")
+    for s in all_stats[:20]:  # top 20
+        cat = s.get("categoria") or "N/A"
+        seg = s.get("segmento")
+        seg_label = SEGMENTO_LABELS.get(seg, "No especificado") if seg else "N/A"
+        total = s["total_afiliados"]
+        top3 = _top_products_text(s)
+        prima = s.get("prima_promedio")
+        prima_text = f"${prima:,.0f}" if prima else "N/A"
+        lines.append(f"| {seg_label} | {cat} | {total:,} | {top3} | {prima_text} |")
+
+    return "\n".join(lines)
+
+
+def _top_products_text(stats: dict) -> str:
+    """Format top 3 product percentages from aggregate stats."""
+    products = [
+        ("drogueria", stats.get("pct_drogueria", 0)),
+        ("hoteles", stats.get("pct_hoteles", 0)),
+        ("piscilago", stats.get("pct_piscilago", 0)),
+        ("agencias", stats.get("pct_agencias", 0)),
+        ("vivienda", stats.get("pct_vivienda", 0)),
+    ]
+    products.sort(key=lambda x: x[1], reverse=True)
+    top3 = products[:3]
+    return ", ".join(f"{name}: {pct}%" for name, pct in top3)
 
 
 @mcp.tool()
@@ -348,6 +458,41 @@ async def get_insurance(insurance_id: str) -> str:
 
 
 @mcp.tool()
+async def set_category(session_id: str, categoria: str) -> str:
+    """Set the insurance profile category for an anonymous user after salary profiling.
+
+    The AI calls this when the user provides their salary range during the anonymous
+    profiling flow. Maps the salary answer to a Colsubsidio category.
+
+    Parameters
+    ----------
+    session_id : str
+        The active chat session UUID.
+    categoria : str
+        One of ``A``, ``B``, or ``C`` — the inferred insurance category.
+    """
+    allowed = {"A", "B", "C"}
+    if categoria.upper() not in allowed:
+        return f"Error: categoría debe ser A, B o C. Recibido: '{categoria}'"
+
+    if async_session_maker is None:
+        return "La base de datos no está inicializada."
+
+    async with async_session_maker() as session:
+        db_session = await session.get(Session, session_id)
+        if not db_session:
+            return f"Error: la sesión '{session_id}' no existe."
+
+        profile = db_session.insurance_profile or {}
+        profile["categoria_afiliacion"] = categoria.upper()
+        db_session.insurance_profile = profile
+        db_session.updated_at = datetime.utcnow()
+        await session.commit()
+
+    return f"Categoría {categoria.upper()} registrada correctamente."
+
+
+@mcp.tool()
 async def save_form_field(
     session_id: str, campo: str, valor: str | float | None = None
 ) -> str:
@@ -468,19 +613,83 @@ async def create_application(
 
 
 @mcp.tool()
-def recommend_insurance(profile: dict) -> str:
-    """Recommend insurance products based on a member's demographic profile.
+def recommend_insurance(
+    profile: dict,
+    documento: str | None = None,
+) -> str:
+    """Recommend insurance products based on profile + optional category/segment.
 
-    Applies deterministic rules against the profile attributes and returns
-    an ordered list of matching products with descriptions and confidence levels.
+    When ``documento`` is provided, looks up the affiliate's category and segment
+    from the Colsubsidio dataset for personalized recommendations.
+    When ``documento`` is not provided but profile has ``categoria_afiliacion``,
+    uses that category directly.
+    When ``salario`` is in profile without categoria, infers the category from salary.
 
     Parameters
     ----------
     profile : dict
-        Demographic attributes collected from conversation
-        (e.g., ``{{"familia_con_hijos": true, "preocupacion": "proteger"}}``).
+        Demographic attributes collected from conversation (same as before).
+    documento : str | None, optional
+        Identity document number for enriched category+segment lookup.
     """
-    products = match_products(profile)
+    # Resolve categoria from documento or profile
+    categoria: str | None = None
+    segmento: str | None = None
+
+    if documento:
+        from app.services.segment_data import SegmentDataService
+
+        try:
+            segment_svc = SegmentDataService.get_instance()
+        except RuntimeError:
+            segment_svc = None
+
+        if segment_svc and segment_svc.is_loaded():
+            info = segment_svc.lookup_by_documento(documento)
+            if info:
+                categoria = info["categoria"]
+                segmento = info.get("segmento")
+                logger.info(
+                    "recommend_insurance: documento %s → categoria=%s, segmento=%s",
+                    documento, categoria, segmento,
+                )
+            else:
+                logger.warning(
+                    "recommend_insurance: documento %s not found in segment dataset",
+                    documento,
+                )
+
+    # Fallback: profile has categoria_afiliacion
+    if categoria is None and profile.get("categoria_afiliacion"):
+        categoria = profile["categoria_afiliacion"]
+
+    # Fallback: infer from salario
+    if categoria is None and profile.get("salario"):
+        categoria = _calcular_categoria(profile["salario"])
+
+    # Derive life-stage segment from profile
+    segmento_vida = derive_segmento_vida(profile)
+    en_credito = profile.get("tiene_deuda_activa") or profile.get("ruta_credito") is True
+
+    # Run appropriate matching
+    if categoria and categoria in ("A", "B", "C"):
+        logger.info(
+            "recommend_insurance: using match_products_by_segment (categoria=%s, segmento=%s, segmento_vida=%s)",
+            categoria, segmento, segmento_vida,
+        )
+        products = match_products_by_segment(
+            profile, categoria, segmento,
+            segmento_vida=segmento_vida, en_credito=en_credito,
+        )
+    else:
+        logger.info(
+            "recommend_insurance: using match_products + catalog (segmento_vida=%s)",
+            segmento_vida,
+        )
+        products = match_products_by_segment(
+            profile, None, None,
+            segmento_vida=segmento_vida, en_credito=en_credito,
+        )
 
     if not products:
         return "No encontramos productos que se ajusten a tu perfil."
@@ -492,12 +701,23 @@ def recommend_insurance(profile: dict) -> str:
             "medium": "⚠️ Compatibilidad media",
             "low": "ℹ️ Compatibilidad baja",
         }.get(p["confidence"], p["confidence"])
-        lines.append(
-            f"\n**{i}. {p['nombre']}**\n"
-            f"   {p['descripcion']}\n"
-            f"   Prima base: ${p['prima_base']:,} COP/mes\n"
-            f"   {confidence_label}: {p['match_reason']}"
-        )
+        aseguradoras = p.get("aseguradoras")
+        restriccion = p.get("restriccion")
+
+        detail = f"\n**{i}. {p['nombre']}**\n"
+        detail += f"   {p['descripcion']}\n"
+        detail += f"   Prima base: ${p['prima_base']:,} COP/mes\n"
+        if aseguradoras:
+            detail += f"   Aseguradoras: {aseguradoras}\n"
+        if restriccion:
+            detail += f"   ⚠️ {restriccion}\n"
+        detail += f"   {confidence_label}: {p['match_reason']}"
+        lines.append(detail)
+
+    # Append category note when applicable
+    if categoria:
+        lines.append(f"\n*Recomendación personalizada para categoría {categoria}*")
+
     return "\n".join(lines)
 
 
