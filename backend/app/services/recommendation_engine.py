@@ -62,12 +62,21 @@ PRODUCTS: dict[str, dict[str, Any]] = {
         "cobertura_max": 80_000_000,
         "categoria": "movilidad",
     },
+    "vida_deudor": {
+        "nombre": "Vida Deudor",
+        "descripcion": "Protección de deudas en caso de fallecimiento o incapacidad",
+        "prima_base": 20_000,
+        "cobertura_max": 100_000_000,
+        "categoria": "personal",
+        "edad_min": 18,
+        "edad_max": 70,
+    },
 }
-
+ 
 # ──────────────────────────────────────────────
 # RULES — 7 deterministic rules
 # ──────────────────────────────────────────────
-
+ 
 RULES: list[tuple[str, Any]] = [
     ("vida", lambda p: p.get("familia_con_hijos") is True and p.get("preocupacion") == "proteger"),
     ("accidentes", lambda p: _edad_in_range(p.get("edad"), 18, 35) and p.get("estado_civil") == "soltero"),
@@ -75,6 +84,7 @@ RULES: list[tuple[str, Any]] = [
     ("mascotas", lambda p: p.get("tiene_mascota") is True),
     ("hogar", lambda p: p.get("es_propietario_vivienda") is True),
     ("movilidad", lambda p: p.get("tiene_vehiculo") is not None),
+    ("vida_deudor", lambda p: p.get("tiene_deuda_activa") is True),
 ]
 
 # ──────────────────────────────────────────────
@@ -88,6 +98,7 @@ _RULE_CONFIDENCE: dict[str, str] = {
     "mascotas": "high",
     "hogar": "high",
     "movilidad": "high",
+    "vida_deudor": "high",
 }
 
 _RULE_REASONS: dict[str, str] = {
@@ -97,7 +108,60 @@ _RULE_REASONS: dict[str, str] = {
     "mascotas": "Tiene mascota(s) y desea protegerlas",
     "hogar": "Es propietario de vivienda y desea protegerla",
     "movilidad": "Tiene vehículo y desea protegerlo",
+    "vida_deudor": "Tiene deuda activa y desea proteger a sus beneficiarios",
 }
+
+# ──────────────────────────────────────────────
+# COMPOUND RULES — R8-R13
+# ──────────────────────────────────────────────
+
+SEGMENTO_LABELS: dict[str | None, str] = {
+    "LAMBDA": "Sin grupo familiar",
+    "RHO": "Monoparental",
+    "EPSILON": "Nuclear",
+    "IOTA": "Pareja",
+    "CHI": "No especificado",
+    "THETA": "No especificado",
+    "PI": "No especificado",
+    None: "No disponible",
+}
+
+SEGMENT_BOOST: dict[str, list[str]] = {
+    "LAMBDA": ["vida", "hogar"],
+    "RHO": ["vida", "accidentes"],
+    "EPSILON": ["vida", "hogar"],
+    "IOTA": ["vida", "hogar"],
+}
+
+# Each tuple: (categoria, segmento, [product_ids], confidence, reason_template)
+# None in categoria/segmento = any match
+SEGMENT_RULES: list[tuple[str | None, str | None, list[str], str, str]] = [
+    # R8:  A + LAMBDA  → vida, hogar
+    ("A", "LAMBDA", ["vida", "hogar"], "medium",
+     "Común en afiliados {categoria} con perfil {segmento_label}"),
+    # R9:  A + RHO     → vida, accidentes
+    ("A", "RHO", ["vida", "accidentes"], "medium",
+     "Común en afiliados {categoria} con perfil {segmento_label}"),
+    # R10: A + EPSILON → vida, hogar
+    ("A", "EPSILON", ["vida", "hogar"], "medium",
+     "Común en afiliados {categoria} con perfil {segmento_label}"),
+    # R11: B + any     → accidentes, movilidad
+    ("B", None, ["accidentes", "movilidad"], "medium",
+     "Producto popular en tu categoría de afiliación ({categoria})"),
+    # R12: C + any     → all 6 (vida+hogar high, rest medium)
+    ("C", None, ["vida", "hogar", "movilidad", "accidentes", "viajes", "mascotas"],
+     "mixed",  # special handling in code
+     "Cobertura premium disponible para tu categoría ({categoria})"),
+    # R13: any + IOTA  → vida, hogar
+    (None, "IOTA", ["vida", "hogar"], "medium",
+     "Común en afiliados con perfil de {segmento_label}"),
+]
+
+# Products whose compound confidence is "high" in R12
+_R12_HIGH_PRODUCTS: set[str] = {"vida", "hogar"}
+
+_VALID_CATEGORIAS: set[str] = {"A", "B", "C"}
+
 
 # ──────────────────────────────────────────────
 # MULTIPLIERS
@@ -183,6 +247,120 @@ def match_products(profile: dict) -> list[dict[str, Any]]:
     # Sort: high confidence first, then prima_base descending
     matched.sort(key=lambda p: (0 if p["confidence"] == "high" else 1, -p["prima_base"]))
     return matched
+
+
+# ──────────────────────────────────────────────
+# COMPOUND MATCHING (R8-R13 + R1-R7 merge)
+# ──────────────────────────────────────────────
+
+
+def _match_compound_rules(
+    categoria: str | None,
+    segmento: str | None,
+) -> dict[str, tuple[str, str]]:
+    """Apply SEGMENT_RULES and return ``{product_id: (confidence, reason)}``.
+
+    confidence is "high" or "medium" as determined by compound rules alone.
+    """
+    compound: dict[str, tuple[str, str]] = {}
+
+    for rule_cat, rule_seg, product_ids, confidence, reason_tpl in SEGMENT_RULES:
+        if rule_cat is not None and rule_cat != categoria:
+            continue
+        if rule_seg is not None and rule_seg != segmento:
+            continue
+
+        seg_label = SEGMENTO_LABELS.get(segmento, "No especificado")
+        reason = reason_tpl.format(categoria=categoria or "", segmento_label=seg_label).strip()
+
+        for pid in product_ids:
+            if confidence == "mixed":
+                conf = "high" if pid in _R12_HIGH_PRODUCTS else "medium"
+            else:
+                conf = confidence
+
+            existing_conf = compound.get(pid, (None, ""))[0]
+            if existing_conf == "high":
+                continue
+            compound[pid] = (conf, reason)
+
+    return compound
+
+
+def match_products_by_segment(
+    profile: dict,
+    categoria: str | None = None,
+    segmento: str | None = None,
+) -> list[dict[str, Any]]:
+    """Apply compound rules (R8-R13) + conversational rules (R1-R7).
+
+    Parameters
+    ----------
+    profile : dict
+        Conversational profile (same as match_products).
+    categoria : str | None
+        One of ``"A"``, ``"B"``, ``"C"``, or None/MU for fallback.
+    segmento : str | None
+        Family segment label, or None if unknown.
+
+    Returns
+    -------
+    list[dict]
+        Merged, sorted product list. Same schema as ``match_products()``.
+    """
+    categoria_usable = categoria in _VALID_CATEGORIAS
+    should_run_compound = categoria_usable or segmento is not None
+
+    logger.info(
+        "match_products_by_segment: categoria=%s, segmento=%s, compound=%s",
+        categoria, segmento, should_run_compound,
+    )
+
+    conversational = match_products(profile)
+    conv_by_id: dict[str, dict[str, Any]] = {p["product_id"]: p for p in conversational}
+
+    if not should_run_compound:
+        for p in conversational:
+            p["confidence"] = "medium"
+            p["match_reason"] = f"{p['match_reason']} (perfil general)"
+        conversational.sort(key=lambda p: (0 if p["confidence"] == "high" else 1, -p["prima_base"]))
+        return conversational
+
+    compound: dict[str, tuple[str, str]] = _match_compound_rules(categoria, segmento)
+
+    result: dict[str, dict[str, Any]] = {}
+
+    for pid, p in conv_by_id.items():
+        entry = dict(p)
+        if pid in compound:
+            if entry["confidence"] != "high":
+                pass
+            entry["match_reason"] = f"{entry['match_reason']} y está alineado con tu categoría"
+        result[pid] = entry
+
+    for pid, (conf, reason) in compound.items():
+        if pid not in result and pid in PRODUCTS:
+            product = PRODUCTS[pid]
+            result[pid] = {
+                "product_id": pid,
+                "nombre": product["nombre"],
+                "descripcion": product["descripcion"],
+                "categoria": product["categoria"],
+                "prima_base": product["prima_base"],
+                "match_reason": reason,
+                "confidence": conf,
+            }
+
+    result_list = list(result.values())
+    boost_products = SEGMENT_BOOST.get(segmento or "", [])
+
+    def _sort_key(p: dict) -> tuple:
+        conf_order = 0 if p["confidence"] == "high" else 1
+        boosted = 0 if p["product_id"] in boost_products else 1
+        return (conf_order, boosted, -p["prima_base"])
+
+    result_list.sort(key=_sort_key)
+    return result_list
 
 
 def quote_product(
