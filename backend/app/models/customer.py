@@ -32,6 +32,13 @@ class Customer(Base):
         CheckConstraint("categoria_afiliacion IN ('A','B','C')"),
         nullable=True,
     )
+    ocupacion: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    numero_hijos: Mapped[int | None] = mapped_column(Integer, default=0, nullable=True)
+    estado_civil: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    tipo_empleado: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    segmento_grupo_familiar: Mapped[str | None] = mapped_column(
+        String(20), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         default=datetime.utcnow, onupdate=datetime.utcnow

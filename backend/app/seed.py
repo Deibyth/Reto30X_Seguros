@@ -55,6 +55,10 @@ CUSTOMERS = [
         "tipo_contrato": "Indefinido",
         "antiguedad_meses": 54,
         "score_crediticio": 720,
+        "ocupacion": "Ingeniero de Sistemas",
+        "numero_hijos": 2,
+        "estado_civil": "Casado",
+        "tipo_empleado": "dependiente",
     },
     {
         "documento_identidad": "100000002",
@@ -65,6 +69,10 @@ CUSTOMERS = [
         "tipo_contrato": None,  # estudiante
         "antiguedad_meses": 0,
         "score_crediticio": None,
+        "ocupacion": "Estudiante",
+        "numero_hijos": 0,
+        "estado_civil": "Soltero",
+        "tipo_empleado": "estudiante",
     },
     # --- Categoría A (≤ 2 SMMLV ~72%) ---
     {
@@ -869,17 +877,22 @@ async def seed() -> None:
         async with db.async_session_maker() as session:
             now = datetime.now(timezone.utc)
             # Use explicit categoria if provided, otherwise infer from salary
-            categoria = c.get("categoria_afiliacion") or _calcular_categoria(c["salario"])
+            raw_categoria = c.get("categoria_afiliacion")
+            categoria = raw_categoria if raw_categoria in ("A", "B", "C") else _calcular_categoria(c["salario"])
             result = await session.execute(
                 text("""
                     INSERT INTO customers
                         (id, documento_identidad, nombre_completo, email, telefono,
                          salario, tipo_contrato, antiguedad_meses, score_crediticio,
-                         categoria_afiliacion, segmento_grupo_familiar, created_at, updated_at)
+                         categoria_afiliacion, segmento_grupo_familiar,
+                         ocupacion, numero_hijos, estado_civil, tipo_empleado,
+                         created_at, updated_at)
                     VALUES
                         (lower(hex(randomblob(16))), :doc, :nombre, :email, :tel,
                          :salario, :contrato, :antiguedad, :score,
-                         :categoria, :segmento, :now, :now)
+                         :categoria, :segmento,
+                         :ocupacion, :hijos, :civil, :tipo_emp,
+                         :now, :now)
                     RETURNING id
                 """),
                 {
@@ -893,6 +906,10 @@ async def seed() -> None:
                     "score": c["score_crediticio"],
                     "categoria": categoria,
                     "segmento": c.get("segmento_grupo_familiar"),
+                    "ocupacion": c.get("ocupacion"),
+                    "hijos": c.get("numero_hijos"),
+                    "civil": c.get("estado_civil"),
+                    "tipo_emp": c.get("tipo_empleado"),
                     "now": now,
                 },
             )
