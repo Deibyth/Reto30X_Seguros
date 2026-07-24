@@ -28,6 +28,7 @@ from app.ai.client import AIClient, ChatMessage, ChatResult as AiChatResult
 from app.models.conversation import Conversation
 from app.models.session import Session
 from app.schemas.insurance_schema import InsuranceFormSchema
+from app.services.audio_decision import AudioContext, AudioDecisionEngine
 from app.services.tool_bridge import ToolBridge
 
 logger = logging.getLogger(__name__)
@@ -146,6 +147,7 @@ class ChatResult:
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     campos_actualizados: list[str] = field(default_factory=list)
     completitud_pct: float = 0.0
+    audio_url: str | None = None
 
 
 class ChatService:
@@ -162,10 +164,14 @@ class ChatService:
         session_maker: async_sessionmaker[AsyncSession],
         ai_client: AIClient,
         tool_bridge: ToolBridge,
+        tts_service: object | None = None,
+        stt_service: object | None = None,
     ) -> None:
         self._session_maker = session_maker
         self._ai_client = ai_client
         self._tool_bridge = tool_bridge
+        self.tts_service = tts_service
+        self.stt_service = stt_service
 
     # ------------------------------------------------------------------
     # Session lifecycle
@@ -397,7 +403,30 @@ class ChatService:
                 "7. Si no confirma o quiere cambiar algo, preguntá qué desea modificar."
             )
 
+        # --- Voice instructions (TTS available) ---
+        if self.tts_service is not None:
+            parts.append(self._build_voice_prompt())
+
         return "\n\n".join(parts)
+
+    @staticmethod
+    def _build_voice_prompt() -> str:
+        """Build voice/Audio system prompt fragment."""
+        return (
+            "--- INSTRUCCIONES DE VOZ ---\n"
+            "Tienes la capacidad de responder con AUDIO (nota de voz) además de texto.\n\n"
+            "CUÁNDO USAR AUDIO:\n"
+            "- Saludos iniciales a clientes potenciales (genera confianza)\n"
+            "- Cuando el usuario te haya enviado un audio (responde en el mismo formato)\n"
+            "- Explicaciones de productos, coberturas, o recomendaciones (información útil en voz)\n"
+            "- Respuestas informativas largas\n\n"
+            "CUÁNDO NO USAR AUDIO:\n"
+            "- NUNCA cuando respondas con URLs, teléfonos, correos electrónicos\n"
+            "- NUNCA en mensajes de error o confirmaciones muy cortas\n"
+            "- No es necesario usar audio siempre — la variedad es buena\n\n"
+            "Tú decides cuándo es natural usar audio. Si crees que el momento lo amerita, "
+            "marcá tu respuesta para audio. Si no, solo texto está bien."
+        )
 
     @staticmethod
     def _build_profiling_instructions(product_context: str | None) -> str:
@@ -533,8 +562,41 @@ class ChatService:
     # Main processing
     # ------------------------------------------------------------------
 
+    async def _add_audio_to_result(
+        self, reply: str, result: ChatResult, session: Session,
+        *, user_sent_audio: bool = False,
+    ) -> ChatResult:
+        """Post-process a ChatResult: decide if audio is appropriate and generate it.
+
+        Detects greeting context and product mentions automatically from the reply.
+        If TTS service is not available or audio decision says no, returns unmodified.
+        """
+        if self.tts_service is None:
+            return result
+
+        # Auto-detect context signals
+        is_greeting = session.estado_actual == "inicio" or "Soy Anna" in reply or "soy Anna" in reply
+        has_product_keywords = any(
+            kw in reply.lower()
+            for kw in ("seguro", "vida", "hogar", "movilidad", "mascota", "viaje", "accidente")
+        )
+
+        context = AudioContext(
+            is_greeting=is_greeting,
+            user_sent_audio=user_sent_audio,
+            product_mentioned=has_product_keywords,
+            text_length=len(reply),
+        )
+
+        if AudioDecisionEngine.should_send_audio(reply, context):
+            audio_url = await self.tts_service.generate(reply)
+            result.audio_url = audio_url
+
+        return result
+
     async def process_message(
-        self, session: Session, user_message: str
+        self, session: Session, user_message: str,
+        *, user_sent_audio: bool = False,
     ) -> ChatResult:
         """Process a user message through the two-phase AI tool loop.
 
@@ -637,13 +699,15 @@ class ChatService:
                 session.id,
                 tool_calls=[],
             )
-            return ChatResult(
+            result = ChatResult(
                 session_id=session.id,
                 reply=phase1.reply,
                 model=phase1.model,
                 campos_actualizados=campos_actualizados,
                 completitud_pct=self._compute_completitud_pct(session),
             )
+            result = await self._add_audio_to_result(phase1.reply, result, session, user_sent_audio=user_sent_audio)
+            return result
 
         # --- 8. Execute tool calls ---
         phase2_messages: list[dict] = [
@@ -726,13 +790,15 @@ class ChatService:
             else:
                 completitud_pct = cached_completitud_pct
 
-        return ChatResult(
+        result = ChatResult(
             session_id=session.id,
             reply=phase2.reply,
             model=phase2.model,
             campos_actualizados=campos_actualizados,
             completitud_pct=completitud_pct,
         )
+        result = await self._add_audio_to_result(phase2.reply, result, session, user_sent_audio=user_sent_audio)
+        return result
 
     # ------------------------------------------------------------------
     # Insurance state helpers
