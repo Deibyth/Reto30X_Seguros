@@ -162,6 +162,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     outbound_service = OutboundService(
         session_maker=db.async_session_maker,
         ai_client=ai_client,
+        tts_service=tts_service,
     )
     app.state.outbound_service = outbound_service
     logger.info("OutboundService initialized")
@@ -187,6 +188,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         scheduler.start()
         app.state.outbound_scheduler = scheduler
         logger.info("Outbound scheduler started")
+
+        # Run first cycle immediately on startup (not in testing)
+        if settings.environment != "testing":
+            await scheduler.run_once()
     else:
         app.state.outbound_scheduler = None
         logger.warning("Outbound scheduler not started — no database session maker")
