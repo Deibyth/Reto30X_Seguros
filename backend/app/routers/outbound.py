@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from sqlalchemy import select, update
+from sqlalchemy import or_, select, update
 
 from app.database import get_db
 from app.models.customer import Customer
@@ -56,7 +56,10 @@ async def get_pending(request: Request, limit: int = 20) -> PendingResponse:
             select(Notification, Customer)
             .join(Customer, Notification.customer_id == Customer.id)
             .where(
-                Notification.estado == "pendiente",
+                or_(
+                    Notification.estado == "pendiente",
+                    Notification.estado == "reintento",
+                ),
                 Notification.tipo == "wpp",
                 Notification.scheduled_at <= datetime.utcnow(),
             )

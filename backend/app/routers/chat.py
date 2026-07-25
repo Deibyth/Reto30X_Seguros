@@ -34,6 +34,7 @@ class ChatResponse(BaseModel):
     campos_actualizados: list[str] = Field(default_factory=list)
     completitud_pct: float = Field(default=0.0)
     audio_url: str | None = None
+    buttons: list[dict] | None = None
 
 
 class TranscribeResponse(BaseModel):
@@ -90,6 +91,8 @@ async def chat_handler(
             model=result.model,
             campos_actualizados=result.campos_actualizados,
             completitud_pct=result.completitud_pct,
+            buttons=result.buttons,
+            audio_url=result.audio_url,
         )
 
     except Exception as exc:

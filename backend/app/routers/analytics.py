@@ -87,3 +87,21 @@ async def ai_efficiency(request: Request) -> JSONResponse:
         return _service_unavailable()
     data = await svc.get_ai_efficiency()
     return JSONResponse(content=data)
+
+
+@router.get("/supervision")
+async def supervision(request: Request) -> JSONResponse:
+    """Return all sessions with conversations for human-in-the-loop monitoring.
+
+    Requires admin authentication via ``Authorization: Bearer admin-token``.
+    """
+    from app.routers.auth import require_admin
+
+    auth_header = request.headers.get("Authorization")
+    require_admin(authorization=auth_header)  # type: ignore[arg-type]
+
+    svc = _get_service(request)
+    if svc is None:
+        return _service_unavailable()
+    data = await svc.get_supervision()
+    return JSONResponse(content=data)
