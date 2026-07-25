@@ -51,6 +51,15 @@ class ApiKeyService:
     def compare(self, left: str, right: str) -> bool:
         return hmac.compare_digest(left, right)
 
+    async def _audit_verification(self, db: AsyncSession, actor: str | None,
+                                  action: str, target: str, outcome: str) -> None:
+        try:
+            await record_audit(db, actor, action, target, outcome)
+            await db.commit()
+        except Exception as error:
+            await db.rollback()
+            raise HTTPException(503, "API key verification unavailable") from error
+
     @staticmethod
     def _metadata(row) -> dict:
         return {"id": row[0], "prefix": row[1], "name": row[3], "scopes": row[4].split(","),
@@ -82,16 +91,13 @@ class ApiKeyService:
         valid = bool(match and self.compare(candidate, stored) and row and not row[7] and
                      (row[6] is None or row[6] > self.clock()) and (row[8] is None or row[8] > self.clock()))
         if not valid:
-            await record_audit(db, None, "api_key.verify", prefix or "unknown", "denied")
-            await db.commit()
+            await self._audit_verification(db, None, "api_key.verify", prefix or "unknown", "denied")
             return None
         result = KeyResult(row[1], None, self._metadata(row))
         if scope and scope not in row[4].split(","):
-            await record_audit(db, row[0], "api_key.scope", scope, "denied")
-            await db.commit()
+            await self._audit_verification(db, row[0], "api_key.scope", scope, "denied")
             return None
-        await record_audit(db, row[0], "api_key.verify", prefix, "success")
-        await db.commit()
+        await self._audit_verification(db, row[0], "api_key.verify", prefix, "success")
         return result
 
     async def revoke(self, db: AsyncSession, actor: str, key_id: str) -> None:
@@ -105,8 +111,9 @@ class ApiKeyService:
 
     async def rotate(self, db: AsyncSession, actor: str, key_id: str, scopes: set[str], overlap_seconds=0) -> KeyResult:
         until = int(self.clock()) + max(0, overlap_seconds)
+        original_id = await db.scalar(text("SELECT id FROM api_keys WHERE prefix=:id"), {"id": key_id})
         await db.execute(text("UPDATE api_keys SET overlap_until=:until WHERE prefix=:id"), {"until": until, "id": key_id})
-        result = await self.issue(db, actor, "rotated", scopes, rotated_from=key_id)
+        result = await self.issue(db, actor, "rotated", scopes, rotated_from=original_id)
         return result
 
 

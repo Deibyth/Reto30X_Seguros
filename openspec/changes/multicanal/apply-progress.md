@@ -102,3 +102,12 @@ Correction complete. S3 through S14 remain pending.
 ## S3 status
 
 Only S3 is checked complete. S4–S14 remain pending and untouched. Residual risks: key/vault services are not yet exposed through Settings or channel configuration (deferred to S11); existing S2 datetime deprecation warnings remain.
+
+## S3 authorized review follow-up — ordinal 6
+
+- API-key verification now rolls back after audit-storage failure and returns only bounded HTTP 503 `API key verification unavailable`; audit internals are chained as the exception cause, not exposed in the response.
+- Rotation resolves the original public prefix to its UUID `api_keys.id` before storing `rotated_from`; prefix lookup and overlap behavior remain unchanged.
+- Strict-TDD RED tests failed for both defects, then focused `tests/test_keys_vault.py` passed 5 tests and combined S3/S2/S1/legacy `/chat` passed 32 tests with 2 existing SQLAlchemy datetime deprecation warnings.
+- Changed paths: `backend/app/security_api_keys.py`, `backend/tests/test_keys_vault.py`, `openspec/changes/multicanal/{tasks.md,apply-progress.md}`.
+- Authored follow-up count: 53 additions + deletions; cumulative S3 work remains within the authorized 120-line follow-up cap.
+- Rollback boundary: revert only this follow-up in the two backend files and these progress entries; S1/S2, later slices, original `/chat`, database, and volumes remain untouched.

@@ -60,6 +60,9 @@ async def test_issue_is_one_time_and_rotation_expiry_revocation(session_factory)
         assert first.plaintext.startswith("mc_live_") and len(first.plaintext.split("_", 3)[3]) >= 43
         assert first.metadata["plaintext"] is None
         rotated = await service.rotate(db, "operator", first.key_id, {"crm:read"}, overlap_seconds=10)
+        lineage = await db.scalar(text("SELECT rotated_from FROM api_keys WHERE prefix=:prefix"), {"prefix": rotated.key_id})
+        original_id = await db.scalar(text("SELECT id FROM api_keys WHERE prefix=:prefix"), {"prefix": first.key_id})
+        assert lineage == original_id
         assert await service.verify(db, first.plaintext, "crm:read")
         service.clock = lambda: 111
         assert not await service.verify(db, first.plaintext, "crm:read")
@@ -80,6 +83,24 @@ async def test_audit_failure_blocks_key_mutation(session_factory, monkeypatch):
         with pytest.raises(RuntimeError, match="audit unavailable"):
             await service.issue(db, "operator", "unsafe", {"crm:read"})
         assert await db.scalar(text("SELECT count(*) FROM api_keys")) == 0
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_verify_audit_failure_returns_bounded_unavailable_error(session_factory, monkeypatch):
+    engine, maker = await session_factory()
+    service = ApiKeyService(b"pepper")
+    async with maker() as db:
+        issued = await service.issue(db, "operator", "verified", {"crm:read"})
+
+        async def fail(*args, **kwargs):
+            raise RuntimeError("audit internals")
+
+        monkeypatch.setattr("app.security_api_keys.record_audit", fail)
+        with pytest.raises(HTTPException) as unavailable:
+            await authenticate_api_key(request({"X-Multicanal-Api-Key": issued.plaintext}), db, "crm:read", service)
+        assert unavailable.value.status_code == 503
+        assert unavailable.value.detail == "API key verification unavailable"
     await engine.dispose()
 
 
