@@ -45,28 +45,104 @@ INSURANCE_STATES = {
 
 ANNA_SYSTEM_PROMPT = """Eres Anna, una asesora experta de Colsubsidio especializada en seguros.
 
-Tu personalidad:
-- Eres cálida, cercana y genuina. Hablas como una persona real, no como un bot.
-- Usas un tono amable y tranquilizador, como si estuvieras al otro lado de la mesa ayudando a alguien que confía en ti.
-- Varias tu forma de expresarte: a veces usas frases más cortas, otras más largas. No suenas repetitiva ni estructurada.
-- Usas expresiones cotidianas como "déjame ver", "claro que sí", "con gusto", "por supuesto", "te entiendo", "tranquilo".
-- Te preocupas genuinamente por entender la situación de cada persona. Preguntas para asegurarte, no por cumplir un formulario.
-- Celebras los logros pequeños ("¡perfecto!", "genial, ya tenemos eso", "excelente, gracias").
-- Si alguien se equivoca o no sabe algo, lo normalizas: "no te preocupes, eso es común" o "tranquilo, para eso estoy aquí".
-- Nunca suenas a manual de instrucciones. No enumeres pasos. Simplemente conversas.
+PERSONALIDAD:
+- Cálida, cercana, genuina. Hablas como una persona real, no como un bot.
+- Varias tu forma de expresarte. No suenas repetitiva ni estructurada.
+- Expresiones naturales: "déjame ver", "claro que sí", "con gusto", "te entiendo", "tranquilo".
+- Si alguien no sabe algo, normalízalo: "no te preocupes, eso es común".
 
-Reglas importantes:
-- Preséntate SIEMPRE como Anna al inicio de la conversación. Tu primer mensaje debe incluir tu nombre: "¡Hola! Soy Anna, tu asesora de Colsubsidio" o similar. Esto genera confianza.
-- Cuando el usuario te dé su número de documento y la herramienta get_customer devuelva sus datos, USA SU NOMBRE para personalizar tu respuesta. Por ejemplo: "¡Genial Juan! Ya tengo tu información..." en lugar de un "Genial" genérico. La gente confía más cuando siente que la conoces.
-- Español neutro siempre: sin regionalismos, sin voseo, sin modismos locales.
-- Nunca inventes información sobre productos, tasas o requisitos. Si no sabes algo, di que prefieres consultar con un asesor especializado para darle la información exacta.
-- Mantén la calidez incluso en respuestas cortas.
-- La persona debe sentir que habla con una asesora de verdad, no con un chatbot.
+REGLAS DE ORO (sobre cualquier otra instrucción):
+1. Cuando el usuario diga QUÉ proteger, MUESTRA INTERÉS genuino y pregunta el nombre
+   ANTES de recomendar. Ej: "¡Qué bien que quieras proteger a [lo que dijo]! Soy Anna,
+   tu asesora de Colsubsidio. ¿Cuál es tu nombre?"
+2. Después del nombre, ANTES de recomendar, pregunta 1-2 detalles clave del bien a
+   asegurar según el tipo (ver ABAJO). Así la recomendación es más completa y personalizada.
+3. Solo cuando tengas el nombre + los detalles clave, llama recommend_insurance(profile)
+   con todo lo que hayas recopilado. NO describas productos de memoria.
+4. Guarda el nombre con save_form_field(campo="nombre", valor="...") y USALO siempre.
+5. Si el usuario ACEPTA una recomendación → llama quote_insurance(product_id, profile)
+   INMEDIATAMENTE. NUNCA des precios de memoria.
+6. NUNCA preguntes "¿quieres saber más?" — recomienda y cotiza ya.
+7. NUNCA inventes productos, precios ni categorías que no vengan de las herramientas.
+8. Sé BREVE. Máximo 2-3 oraciones. Una pregunta por turno.
+
+PREGUNTAS CLAVE POR CATEGORÍA (haz 1-2 ANTES de recommend_insurance,
+integradas en la charla, no como formulario):
+
+- VIDA / FAMILIA:
+  1. "¿Es para ti o para tu familia?"
+  2. Si familiar: "¿Cuántos son y qué edades tienen?" (clave para auxilio educativo)
+
+- VEHÍCULO:
+  1. "¿Qué tipo de vehículo? ¿Carro, moto, bicicleta, camión?"
+  2. "¿Es uso particular o de trabajo?"
+
+- MASCOTA:
+  1. "¿Qué mascota tienes? ¿Perro, gato, conejo...?"
+  2. "¿Qué edad tiene?" (afecta la cobertura)
+
+- VIVIENDA / HOGAR:
+  1. "¿Es casa o apartamento?"
+  2. "¿Es propia o alquilada?"
+
+- VIAJES:
+  1. "¿El viaje es nacional o internacional?"
+  2. "¿Viajas solo o con familia?"
+
+- ACCIDENTES:
+  1. "¿Es para ti o para alguien más?"
+  2. "¿Qué actividad o riesgo quieres cubrir?"
+
+La lógica: cada pregunta reduce opciones y da contexto para una recomendación más precisa.
+Suena natural, como quien quiere entender bien antes de aconsejar.
+
+TONO — REGLA ESTRICTA:
+- Usa SIEMPRE "tú" (tuteo colombiano neutro). NUNCA uses "vos" ni voseo.
+- Verbos conjugados en tuteo: "tú cuentas", "tú tienes", "tú hablas", "tú eres",
+  "tú recomiendas", "tú preguntas", "tú llamas".
+- NUNCA uses: "contás", "tenés", "hablás", "sos", "recomendás", "preguntás",
+  "llamá", "pedí", "normalizalo".
+- Ejemplo correcto: "Juan, por lo que me cuentas te recomiendo..."
+- Ejemplo INCORRECTO: "Juan, con lo que me contás te recomiendo..."
+
+REGLAS DE FLUJO — PRODUCTOS COLSUBSIDIO (canal "🏢 COLSUBSIDIO"):
+- Cuando tengas el resultado de recommend_insurance, preséntalo personalizado:
+  "[nombre], por lo que me cuentas te recomiendo..."
+- Cuando tengas el resultado de quote_insurance: "El plan estándar sale a $XX.XXX mensuales".
+- Después de cotizar, pide el documento: "[nombre], para la póliza necesito tu número de documento".
+- Cuando tengas el documento, pregunta por la aceptación de datos:
+  "Perfecto. Antes de seguir, quiero que sepas que acá cuidamos tus datos personales.
+   Puedes revisar nuestra política en https://www.colsubsidio.com/transparencia-acceso-informacion/tratamiento-datos-personales
+   ¿Aceptas?"
+- Si acepta, llama create_policy(documento="...", form_data=..., producto="...").
+
+REGLAS DE FLUJO — PRODUCTOS EXTERNOS (canal "🔗 EXTERNO"):
+- Los productos marcados como EXTERNO no se venden en este chat.
+- Preséntalos con la misma calidez: "[nombre], también hay una opción con [aseguradora]..."
+- Describe brevemente el producto y luego dale el link de compra directa.
+- Ejemplo: "Para comprarlo, puedes ir directamente a este enlace: [url_compra]"
+- NO intentes cotizar ni crear póliza de productos externos — no hay herramienta para eso.
+- Si el usuario pregunta por precio de un externo, dile que lo puede consultar en el enlace.
+- Puedes recomendar AMBOS tipos juntos: primero los de Colsubsidio (venta directa aquí)
+  y luego las alternativas externas con sus links.
+
+REINICIO / CAMBIO DE OPINIÓN:
+- Si el usuario dice "quiero otro producto", "empezar de nuevo", "cambiar", o similar,
+  reinicia el flujo como si fuera el primer mensaje. No te quedes estancada.
+- Ofrece ayuda: "Claro, sin problema. ¿Qué te gustaría proteger ahora?"
+
+DESPUÉS DE CREAR LA PÓLIZA:
+- Felicita al usuario de forma cálida: "¡Listo, [nombre]! Tu póliza ya está activa."
+- Ofrece ayuda adicional: "¿Hay algo más en lo que pueda ayudarte?"
+- Si el usuario dice que no, despídete amablemente.
 
 IMPORTANTE — Formato de herramientas:
-Cuando necesites usar una herramienta, responde ÚNICAMENTE con el formato:
-<function=nombre_de_la_funcion>{"param1": "valor1"}
-Sin texto antes ni después. Una llamada por línea."""
+Llama una función por línea, sin texto antes ni después.
+Ejemplo: <function=save_form_field>{"campo": "nombre", "valor": "Juan"}
+
+CRÍTICO: Responde al usuario en ESPAÑOL NATURAL y cálido. No describas tu
+razonamiento ni tu plan. Simplemente HAZ lo que dice la regla y RESPONDE
+directamente."""
 
 BASE_SYSTEM_PROMPT = ANNA_SYSTEM_PROMPT
 
@@ -90,6 +166,13 @@ _INTENT_KEYWORDS: dict[str, dict[str, int]] = {
         "cobertura": 1,
         "cubrir": 1,
         "amparar": 1,
+        # Pet-specific — weight 2 because mentioning a pet IS the insurance intent
+        "perro": 2,
+        "perrito": 2,
+        "gato": 2,
+        "gatito": 2,
+        "mascota": 2,
+        "mascotas": 2,
     },
 }
 
@@ -113,8 +196,9 @@ _PRODUCT_CONTEXT_KEYWORDS: dict[str, list[str]] = {
         "vive", "vivo", "residencia",
     ],
     "mascotas": [
-        "mascota", "perro", "gato", "mascotas", "perros", "gatos",
-        "canino", "felino",
+        "mascota", "perro", "perrito", "gato", "gatito",
+        "mascotas", "perros", "perritos", "gatos", "gatitos",
+        "canino", "felino", "can", "peludito", "peludo",
     ],
     "viajes": [
         "viaje", "viajar", "viajo", "viaja", "vacaciones", "vuelo",
@@ -148,6 +232,7 @@ class ChatResult:
     campos_actualizados: list[str] = field(default_factory=list)
     completitud_pct: float = 0.0
     audio_url: str | None = None
+    buttons: list[dict] | None = None  # [{"label": "Sí", "value": "sí"}, ...]
 
 
 class ChatService:
@@ -259,13 +344,34 @@ class ChatService:
     # ------------------------------------------------------------------
 
     @staticmethod
+    def _wants_reset(message: str) -> bool:
+        """Detect if the user wants to restart the conversation flow.
+
+        Matches common reset phrases in Spanish.
+        """
+        msg_lower = message.lower().strip()
+        reset_patterns = [
+            "empezar de nuevo", "empezar de cero", "comenzar de nuevo",
+            "otro producto", "otro seguro", "cambiar de producto",
+            "cambiar de seguro", "quiero otro", "mejor otro",
+            "reiniciar", "volver a empezar", "desde el inicio",
+            "desde cero", "quiero cambiar", "no ese", "prefiero otro",
+        ]
+        return any(pat in msg_lower for pat in reset_patterns)
+
+    @staticmethod
     def _classify_intent(message: str) -> str | None:
         """Classify user intent at ``inicio`` state.
 
         Uses weighted keyword scoring against ``_INTENT_KEYWORDS``.
         Returns ``"insurance"`` or ``None`` (neutral/unclear).
 
-        The winner must score >= ``_INTENT_THRESHOLD`` (2).
+        Two-path logic:
+        1. If keyword score >= ``_INTENT_THRESHOLD`` (2) → insurance.
+        2. Fallback: if a specific product was mentioned (via product-context
+           keywords) AND at least one insurance keyword matched → insurance.
+           This catches messages like "proteger a mi familia" or
+           "cuidar a mi perrito" where direct keyword weight is insufficient.
         """
         msg_lower = message.lower()
         score = 0
@@ -273,7 +379,14 @@ class ChatService:
             if re.search(r'\b' + re.escape(kw) + r'\b', msg_lower):
                 score += weight
 
-        return "insurance" if score >= _INTENT_THRESHOLD else None
+        if score >= _INTENT_THRESHOLD:
+            return "insurance"
+
+        # Fallback: product-context + at least one insurance signal
+        if score > 0 and ChatService._detect_product_context(message):
+            return "insurance"
+
+        return None
 
     @staticmethod
     def _detect_product_context(message: str) -> str | None:
@@ -282,11 +395,19 @@ class ChatService:
         Scans the message for product-specific keywords and returns the
         matching product ID (``"movilidad"``, ``"vida"``, ``"hogar"``, etc.)
         or ``None`` if no specific product is mentioned.
+
+        For pet-related keywords, also matches variants like ``perrito``
+        (diminutive) without requiring exact full-word boundaries.
         """
         msg_lower = message.lower()
         for product_id, keywords in _PRODUCT_CONTEXT_KEYWORDS.items():
             for kw in keywords:
-                if re.search(r'\b' + re.escape(kw) + r'\b', msg_lower):
+                # Use strict word boundary for most contexts, but for
+                # mascotas allow substring match so "perrito" matches "perro"
+                if product_id == "mascotas":
+                    if kw in msg_lower:
+                        return product_id
+                elif re.search(r'\b' + re.escape(kw) + r'\b', msg_lower):
                     return product_id
         return None
 
@@ -297,10 +418,14 @@ class ChatService:
     def _build_system_prompt(self, session: Session) -> str:
         """Build the dynamic system prompt for insurance-only flow.
 
-        Includes InsuranceFormSchema, product-context-aware profiling
-        instructions, current collection state, and tool instructions.
+        Two distinct modes:
+        - ``perfilando`` → profiling + recommend only (NO form schema)
+        - ``recopilando_datos_seguro`` / ``completado_seguro`` → full form schema
         """
         is_insurance = self._is_insurance_state(session.estado_actual)
+        is_collecting = session.estado_actual in (
+            "recopilando_datos_seguro", "completado_seguro",
+        )
 
         parts: list[str] = [
             BASE_SYSTEM_PROMPT,
@@ -315,92 +440,94 @@ class ChatService:
 
             parts.append(self._build_profiling_instructions(product_context))
 
-            # --- Anonymous salary profiling ---
-            profile = session.insurance_profile or {}
-            if not profile.get("categoria_afiliacion"):
+            # --- Perfilando mode: NO form collection ---
+            if session.estado_actual == "perfilando":
                 parts.append(
-                    "--- PERFILACIÓN SIN DOCUMENTO ---\n"
-                    "El usuario NO tiene un documento de identidad registrado, así que "
-                    "no podemos buscar su categoría de afiliación.\n\n"
-                    "Para poder recomendar los seguros adecuados, preguntale su rango "
-                    "salarial mensual aproximado. Según lo que responda, se asigna:\n"
-                    "- Más de $4.500.000 → Categoría A (recomendación completa)\n"
-                    "- Entre $2.000.000 y $4.500.000 → Categoría B (recomendación base)\n"
-                    "- Menos de $2.000.000 → Categoría C (recomendación limitada)\n\n"
-                    "Registrá esta respuesta con la herramienta `set_category` "
-                    "pasando el valor 'A', 'B' o 'C'. Ejemplo:\n"
-                    "<function=set_category>{\"categoria\": \"A\"}\n\n"
-                    "Hacé esta pregunta de forma natural dentro de la charla, "
-                    "NO como un formulario. Ejemplo: '¿En qué rango de ingresos "
-                    "estás mensualmente? Así puedo recomendarte lo que mejor se ajusta.'\n"
-                    "Si el usuario prefiere no compartir sus ingresos, asigná Categoría C "
-                    "por defecto para continuar."
+                    "--- MODO PERFILADO — SOLO ENTENDER Y RECOMENDAR ---\n"
+                    "Estás en modo PERFILADO. Tu objetivo es entender la necesidad y\n"
+                    "RECOMENDAR un producto. NO recolectes datos del formulario.\n"
+                    "NO uses save_form_field. NO preguntes datos personales.\n"
+                    "Solo habla con el usuario para saber qué necesita y recomiéndale.\n"
+                    "Una vez que el usuario elija un producto y cotices, ahí pasas\n"
+                    "a recolectar datos."
                 )
 
-        # --- Active form schema ---
-        if is_insurance:
+                # --- Anonymous salary profiling (only during profiling) ---
+                profile = session.insurance_profile or {}
+                if not profile.get("categoria_afiliacion"):
+                    parts.append(
+                        "--- PERFILACIÓN SIN DOCUMENTO ---\n"
+                        "El usuario NO tiene documento registrado. Para recomendar seguros,\n"
+                        "necesitamos su rango salarial. Pregunta de forma BREVE y NATURAL:\n"
+                        "'¿En qué rango de ingresos estás? Así te recomiendo lo que mejor se ajusta.'\n\n"
+                        "Asignación:\n"
+                        "- Más de $4.500.000 → Categoría A\n"
+                        "- Entre $2.000.000 y $4.500.000 → Categoría B\n"
+                        "- Menos de $2.000.000 → Categoría C\n\n"
+                        "Llama a set_category con el valor A, B o C.\n"
+                        "Si prefiere no compartir, asigna Categoría C y continúa."
+                    )
+
+        # --- Active form schema + collection state (ONLY in data collection) ---
+        if is_collecting:
             parts.append("--- ESQUEMA DEL FORMULARIO DE SEGURO ---")
             parts.append(
-                "Usá esta estructura para guiar la recolección de datos del seguro. "
-                "Preguntá los campos de a UNO por turno, en orden lógico por sección. "
+                "Usa esta estructura para guiar la recolección de datos del seguro. "
+                "Pregunta los campos de a UNO por turno, en orden lógico por sección. "
                 "Los campos REQUERIDOS van primero; los opcionales después."
             )
             parts.append(InsuranceFormSchema.to_prompt_text())
 
-        # --- Current collection state ---
-        collected = session.campos_diligenciados or {}
-        nombres_recolectados = list(collected.keys())
-        requeridos = InsuranceFormSchema.campos_requeridos()
-        total_req = len(requeridos)
-        recolectados_req = sum(
-            1 for f in requeridos
-            if collected.get(f.nombre) is not None
-        )
-        faltantes = [
-            f.nombre for f in requeridos
-            if collected.get(f.nombre) is None
-        ]
-
-        parts.append("--- ESTADO DE RECOLECCIÓN ---")
-        if nombres_recolectados:
-            parts.append(
-                f"Campos ya recolectados: {', '.join(nombres_recolectados)}."
+            # --- Current collection state ---
+            collected = session.campos_diligenciados or {}
+            nombres_recolectados = list(collected.keys())
+            requeridos = InsuranceFormSchema.campos_requeridos()
+            total_req = len(requeridos)
+            recolectados_req = sum(
+                1 for f in requeridos
+                if collected.get(f.nombre) is not None
             )
-        else:
-            parts.append("Aún no se han recolectado campos.")
+            faltantes = [
+                f.nombre for f in requeridos
+                if collected.get(f.nombre) is None
+            ]
 
-        if faltantes:
-            parts.append(
-                f"Campos REQUERIDOS por recolectar ({len(faltantes)} restantes): "
-                f"{', '.join(faltantes)}."
-            )
-        else:
-            parts.append("Todos los campos REQUERIDOS están completos.")
+            parts.append("--- ESTADO DE RECOLECCIÓN ---")
+            if nombres_recolectados:
+                parts.append(
+                    f"Campos ya recolectados: {', '.join(nombres_recolectados)}."
+                )
+            else:
+                parts.append("Aún no se han recolectado campos.")
 
-        parts.append(f"Progreso: {recolectados_req}/{total_req} campos requeridos.")
+            if faltantes:
+                parts.append(
+                    f"Campos REQUERIDOS por recolectar ({len(faltantes)} restantes): "
+                    f"{', '.join(faltantes)}."
+                )
+            else:
+                parts.append("Todos los campos REQUERIDOS están completos.")
+
+            parts.append(f"Progreso: {recolectados_req}/{total_req} campos requeridos.")
 
         # --- Insurance system prompt fragment ---
         if is_insurance and INSURANCE_SYSTEM_PROMPT:
             parts.append(INSURANCE_SYSTEM_PROMPT)
 
-        # --- Tool instructions (insurance) ---
-        if is_insurance:
+        # --- Tool instructions (ONLY in data collection) ---
+        if is_collecting:
             parts.append(
                 "--- INSTRUCCIONES DE RECOLECCIÓN (SEGURO) ---\n"
-                "1. Pregunta los campos de a UNO por turno. NUNCA preguntes "
-                "varios campos en un mismo mensaje.\n"
-                "2. Usa la herramienta `save_form_field` con el formato:\n"
+                "1. Ya conoces el nombre del usuario. Úsalo siempre.\n"
+                "2. Pregunta los campos de a UNO por turno.\n"
+                "3. Guarda cada respuesta con save_form_field:\n"
                 "   <function=save_form_field>{\"campo\": \"nombre\", \"valor\": \"respuesta\"}\n"
-                "   para CADA campo que el usuario responda. Una llamada por línea.\n"
-                "3. Si el usuario prefiere no dar un campo opcional, llama a "
-                "save_form_field con valor=None.\n"
-                "4. Prioriza campos REQUERIDOS dentro de cada sección antes que "
-                "los opcionales.\n"
-                "5. Cuando todos los REQUERIDOS estén completos, presenta un RESUMEN "
-                "de los datos recolectados y pregunta '¿Confirmás la solicitud del seguro?'.\n"
-                "6. Si el usuario confirma, usa la herramienta `create_policy` "
-                "con los datos completos de campos_diligenciados para crear la póliza.\n"
-                "7. Si no confirma o quiere cambiar algo, preguntá qué desea modificar."
+                "4. Si el usuario no quiere dar un campo opcional, guarda con valor=None.\n"
+                "5. Prioriza campos REQUERIDOS antes que opcionales.\n"
+                "6. Cuando todos los REQUERIDOS estén completos, presenta un RESUMEN BREVE\n"
+                "   (2-3 líneas) y pregunta '[nombre], ¿confirmas la solicitud?'.\n"
+                "7. Si confirma, usa create_policy(documento=\"...\", form_data=..., producto=\"...\").\n"
+                "8. Si quiere cambiar algo, pregunta qué desea modificar."
             )
 
         # --- Voice instructions (TTS available) ---
@@ -425,7 +552,7 @@ class ChatService:
             "- NUNCA en mensajes de error o confirmaciones muy cortas\n"
             "- No es necesario usar audio siempre — la variedad es buena\n\n"
             "Tú decides cuándo es natural usar audio. Si crees que el momento lo amerita, "
-            "marcá tu respuesta para audio. Si no, solo texto está bien."
+            "marca tu respuesta para audio. Si no, solo texto está bien."
         )
 
     @staticmethod
@@ -433,128 +560,104 @@ class ChatService:
         """Build context-aware profiling instructions based on the product
         the user asked about.
 
-        When the user mentions a specific product (vehículo, vida, hogar, etc.),
-        the instructions prioritize questions about THAT area first, before
-        exploring other needs.
+        When the user already said what to protect (product_context is set),
+        the tool-call instruction goes FIRST so the AI sees it before any
+        general profiling preamble.
 
         When no product context is detected, uses the general profiling flow.
         """
-        lines = [
+        lines: list[str] = [
             "--- PERFILACIÓN CONVERSACIONAL (SEGUROS) ---",
-            "Tu objetivo es ayudar al usuario a encontrar el seguro adecuado.",
-            "NO preguntes 'qué seguro querés' — preguntá sobre su situación de forma natural.",
         ]
 
         if product_context == "movilidad":
             lines.extend([
                 "",
-                "CONTEXTO DETECTADO: El usuario mencionó un VEHÍCULO.",
-                "",
-                "PREGUNTAS PRIORITARIAS (vehículo):",
-                "- ¿Qué tipo de vehículo es? (carro, moto, bicicleta, camión)",
-                "- ¿Cuál es la marca, modelo y año?",
-                "- ¿Cuál es el uso principal? (particular, trabajo, transporte público)",
-                "- ¿Dónde está estacionado usualmente? (garaje, calle, parqueadero público)",
-                "- ¿Tiene algún seguro actualmente?",
-                "- ¿Cuántas personas van a estar cubiertas? (conductor y pasajeros)",
-                "",
-                "SOLO después de cubrir estas preguntas, explorá si necesita otros seguros.",
+                "⚠️ ACCIÓN INMEDIATA REQUERIDA — VEHÍCULO:",
+                "El usuario mencionó un VEHÍCULO y ya dijo qué proteger.",
+                "Llama a recommend_insurance(profile) AHORA MISMO como tu PRIMERA acción.",
+                "NO hagas preguntas. NO pidas más datos. Ejecuta:",
+                '<function=recommend_insurance>{"tiene_vehiculo": "carro"}',
             ])
         elif product_context == "vida":
             lines.extend([
                 "",
-                "CONTEXTO DETECTADO: El usuario mencionó SEGURO DE VIDA.",
-                "",
-                "PREGUNTAS PRIORITARIAS (vida):",
-                "- ¿Para quién es el seguro? (para vos, para tu cónyuge, para un familiar)",
-                "- ¿Tenés hijos o personas que dependan de vos económicamente?",
-                "- ¿Qué rango de edad tenés? (no preguntes edad exacta aún)",
-                "- ¿Buscás protección para gastos básicos o algo más completo?",
-                "- ¿Tenés algún seguro de vida actualmente?",
-                "",
-                "SOLO después de cubrir estas preguntas, explorá si necesita otros seguros.",
+                "⚠️ ACCIÓN INMEDIATA REQUERIDA — SEGURO DE VIDA:",
+                "El usuario mencionó SEGURO DE VIDA y ya dijo qué proteger.",
+                "Llama a recommend_insurance(profile) AHORA MISMO como tu PRIMERA acción.",
+                "NO hagas preguntas. NO pidas más datos. Ejecuta:",
+                '<function=recommend_insurance>{"familia_con_hijos": true, "preocupacion": "proteger"}',
             ])
         elif product_context == "hogar":
             lines.extend([
                 "",
-                "CONTEXTO DETECTADO: El usuario mencionó SEGURO DE HOGAR.",
-                "",
-                "PREGUNTAS PRIORITARIAS (hogar):",
-                "- ¿Es casa o apartamento?",
-                "- ¿Es propia o arrendada?",
-                "- ¿En qué zona o ciudad está ubicada?",
-                "- ¿Hace cuánto vivís ahí?",
-                "- ¿Tenés algún seguro actual para la vivienda?",
-                "- ¿Qué te gustaría proteger principalmente? (estructura, contenido, ambos)",
-                "",
-                "SOLO después de cubrir estas preguntas, explorá si necesita otros seguros.",
+                "⚠️ ACCIÓN INMEDIATA REQUERIDA — HOGAR:",
+                "El usuario mencionó SEGURO DE HOGAR y ya dijo qué proteger.",
+                "Llama a recommend_insurance(profile) AHORA MISMO como tu PRIMERA acción.",
+                "NO hagas preguntas. NO pidas más datos. Ejecuta:",
+                '<function=recommend_insurance>{"es_propietario_vivienda": true}',
             ])
         elif product_context == "mascotas":
             lines.extend([
                 "",
-                "CONTEXTO DETECTADO: El usuario mencionó MASCOTAS.",
-                "",
-                "PREGUNTAS PRIORITARIAS (mascotas):",
-                "- ¿Qué tipo de mascota tenés? (perro, gato)",
-                "- ¿Cuál es su nombre, raza y edad aproximada?",
-                "- ¿Está en un lugar donde pueda tener accidentes frecuentes?",
-                "- ¿Tiene algún plan de salud actualmente?",
-                "",
-                "SOLO después de cubrir estas preguntas, explorá si necesita otros seguros.",
+                "⚠️ ACCIÓN INMEDIATA REQUERIDA — MASCOTAS:",
+                "El usuario mencionó MASCOTAS y ya dijo qué proteger.",
+                "Llama a recommend_insurance(profile) AHORA MISMO como tu PRIMERA acción.",
+                "NO hagas preguntas. NO pidas más datos. Ejecuta:",
+                '<function=recommend_insurance>{"tiene_mascota": true}',
             ])
         elif product_context == "viajes":
             lines.extend([
                 "",
-                "CONTEXTO DETECTADO: El usuario mencionó VIAJES.",
-                "",
-                "PREGUNTAS PRIORITARIAS (viajes):",
-                "- ¿Viajás frecuentemente?",
-                "- ¿Son viajes nacionales o internacionales?",
-                "- ¿Viajás solo o con familia?",
-                "- ¿Qué tipo de protección te gustaría tener? (médica, equipaje, cancelación)",
-                "",
-                "SOLO después de cubrir estas preguntas, explorá si necesita otros seguros.",
+                "⚠️ ACCIÓN INMEDIATA REQUERIDA — VIAJES:",
+                "El usuario mencionó VIAJES y ya dijo qué proteger.",
+                "Llama a recommend_insurance(profile) AHORA MISMO como tu PRIMERA acción.",
+                "NO hagas preguntas. NO pidas más datos. Ejecuta:",
+                '<function=recommend_insurance>{"viaja_frecuentemente": true}',
             ])
         elif product_context == "accidentes":
             lines.extend([
                 "",
-                "CONTEXTO DETECTADO: El usuario mencionó ACCIDENTES PERSONALES.",
-                "",
-                "PREGUNTAS PRIORITARIAS (accidentes):",
-                "- ¿Para quién sería la cobertura? (individual o familiar)",
-                "- ¿Qué rango de edad tenés?",
-                "- ¿Realizás actividades de riesgo? (deportes, trabajo en altura, etc.)",
-                "- ¿Buscás una protección básica o más completa?",
-                "",
-                "SOLO después de cubrir estas preguntas, explorá si necesita otros seguros.",
-            ])
-        else:
-            lines.extend([
-                "",
-                "SIN CONTEXTO ESPECÍFICO: Preguntá de forma general para entender su situación.",
-                "",
-                "ÁREAS A EXPLORAR (una por turno, en orden natural):",
-                "- Movilidad: ¿tiene carro, moto o bicicleta? ¿cómo se moviliza?",
-                "- Hogar: ¿vive en casa o apartamento? ¿propia o arrendada?",
-                "- Familia: ¿tiene hijos o personas a cargo?",
-                "- Mascotas: ¿tiene mascotas?",
-                "- Viajes: ¿viaja frecuentemente?",
-                "- Preocupaciones: ¿qué le gustaría proteger?",
-                "",
-                "Explorá UNA área por turno. Pasá a la siguiente solo cuando hayas",
-                "cubierto la anterior. No preguntes todo de una vez.",
+                "⚠️ ACCIÓN INMEDIATA REQUERIDA — ACCIDENTES PERSONALES:",
+                "El usuario mencionó ACCIDENTES PERSONALES y ya dijo qué proteger.",
+                "Llama a recommend_insurance(profile) AHORA MISMO como tu PRIMERA acción.",
+                "NO hagas preguntas. NO pidas más datos. Ejecuta:",
+                '<function=recommend_insurance>{"edad": 30}',
             ])
 
-        lines.append("")
-        lines.append(
-            "PRODUCTOS DISPONIBLES:\n"
-            "- Seguro de Vida: respaldo económico para beneficiarios ($10M-$200M)\n"
-            "- Accidentes Personales: cobertura completa de accidentes\n"
-            "- Asistencia Médica Viajes: emergencias en viajes 24/7\n"
-            "- Seguro Mascotas: cobertura veterinaria para perros y gatos\n"
-            "- Seguro Hogar: protección para vivienda\n"
-            "- Seguro Movilidad: cobertura para vehículos (carro, moto, bici)"
-        )
+        # General profiling preamble — goes AFTER the product-specific action
+        # so the AI reads "call the tool NOW" before any general guidance.
+        lines.extend([
+            "",
+            "INSTRUCCIONES GENERALES DE PERFILADO:",
+            "- NUNCA preguntes 'qué seguro quieres' — pregunta sobre su situación.",
+            "- Con 2-3 datos clave YA puedes recomendar. No esperes a tener todo.",
+            "- recommend_insurance espera campos ESPECÍFICOS en el profile.",
+            "- NO inventes nombres de campos como 'tipo_cobertura'.",
+            "- Después de llamar recommend_insurance, puedes refinar con más preguntas.",
+        ])
+
+        if product_context is None:
+            lines.extend([
+                "",
+                "SIN CONTEXTO ESPECÍFICO: Pregunta de forma general para entender su situación.",
+                "",
+                "PREGUNTAS CLAVE (una por turno):",
+                "- ¿Qué le gustaría proteger? (vehículo, familia, hogar, mascota)",
+                "- Según la respuesta, haz 1-2 preguntas más sobre ese tema.",
+                "",
+                "▶ CUANDO LLAMES recommend_insurance, pasa en profile los campos del",
+                "   contexto detectado (según la respuesta del usuario).",
+            ])
+
+        lines.extend([
+            "",
+            "CUANDO RECIBAS EL RESULTADO DE recommend_insurance:",
+            "1. PRESENTALO al usuario textualmente. No inventes errores ni digas que faltan datos.",
+            "2. recommend_insurance ya tiene suficiente información para recomendar.",
+            "3. Si el usuario pide más detalles o un precio exacto, usa quote_insurance.",
+            "4. NUNCA digas 'no se proporcionaron los campos necesarios' — eso es falso.",
+        ])
 
         return "\n".join(lines)
 
@@ -619,7 +722,23 @@ class ChatService:
         ChatResult
             The AI response with session_id, model info, and field tracking.
         """
-        # --- 0. Intent classification at 'inicio' ---
+        # --- 0a. Reset detection (any state) ---
+        # If user wants to start over, reset to 'inicio' so intent classification runs.
+        if session.estado_actual != "inicio" and self._wants_reset(user_message):
+            logger.info("User requested reset from state %s", session.estado_actual)
+            async with self._session_maker() as db:
+                db_session = await db.get(Session, session.id)
+                if db_session:
+                    db_session.estado_actual = "inicio"
+                    db_session.insurance_profile = {}
+                    db_session.campos_diligenciados = {}
+                    db_session.updated_at = datetime.now(timezone.utc)
+                    await db.commit()
+            session.estado_actual = "inicio"
+            session.insurance_profile = {}
+            session.campos_diligenciados = {}
+
+        # --- 0b. Intent classification at 'inicio' ---
         # Detect insurance intent and product context from the user message.
         intent = (
             self._classify_intent(user_message)
@@ -681,7 +800,7 @@ class ChatService:
             return ChatResult(
                 session_id=session.id,
                 reply="Lo siento, la solicitud tardó demasiado. "
-                       "Por favor intentá de nuevo.",
+                       "Por favor intenta de nuevo.",
                 model="timeout",
             )
 
@@ -757,7 +876,9 @@ class ChatService:
         # --- 9. Phase 2: AI call with tool results ---
         phase2 = await self._timeout_ai_call(
             "Phase 2",
-            self._ai_client.chat_raw(phase2_messages, tools=openai_tools),
+            # IMPORTANT: NO tools in Phase 2 — the model must NOT call
+            # more tools, it must respond to the user with the tool results.
+            self._ai_client.chat_raw(phase2_messages, tools=None),
         )
 
         if phase2 is None:
@@ -765,7 +886,7 @@ class ChatService:
             return ChatResult(
                 session_id=session.id,
                 reply="Lo siento, la solicitud tardó demasiado. "
-                       "Por favor intentá de nuevo.",
+                       "Por favor intenta de nuevo.",
                 model="timeout",
             )
 
@@ -797,6 +918,18 @@ class ChatService:
             campos_actualizados=campos_actualizados,
             completitud_pct=completitud_pct,
         )
+
+        # --- Add Sí/No buttons for data treatment acceptance ---
+        # Show buttons when all required fields are complete AND
+        # data treatment hasn't been accepted yet
+        if (completitud_pct >= 100
+                and session.estado_actual == "recopilando_datos_seguro"
+                and not self._data_treatment_accepted(session)):
+            result.buttons = [
+                {"label": "Sí, acepto", "value": "sí"},
+                {"label": "No, no acepto", "value": "no"},
+            ]
+
         result = await self._add_audio_to_result(phase2.reply, result, session, user_sent_audio=user_sent_audio)
         return result
 
@@ -808,6 +941,12 @@ class ChatService:
     def _is_insurance_state(estado: str) -> bool:
         """Return True if the given state is an insurance-specific state."""
         return estado in INSURANCE_STATES
+
+    @staticmethod
+    def _data_treatment_accepted(session: Session) -> bool:
+        """Check if the user has already accepted data treatment."""
+        campos = session.campos_diligenciados or {}
+        return campos.get("acepta_tratamiento_datos") is True
 
     # ------------------------------------------------------------------
     # Internal helpers
