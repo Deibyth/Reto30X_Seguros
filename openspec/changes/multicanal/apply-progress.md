@@ -83,3 +83,31 @@ Only S2 was checked complete. S3 API keys/vault, Settings UI, and all later slic
 - Process/evidence artifact: `openspec/changes/multicanal/apply-progress.md`; no new residuals; existing datetime deprecation warnings remain.
 
 Correction complete. S3 through S14 remain pending.
+
+## S3 evidence — API keys and vault
+
+| Evidence | Result |
+|---|---|
+| Mode | Strict TDD, Python 3.12 in disposable `python:3.12-slim`; no repository secrets added |
+| RED | `docker run --rm -v "${PWD}:/workspace" -w /workspace/backend python:3.12-slim sh -c "pip install --quiet -r requirements.txt pytest pytest-asyncio httpx argon2-cffi cryptography && python -m pytest -c pyproject.toml tests/test_keys_vault.py tests/test_multicanal_isolation.py -q"` → collection failed: `app.security.api_keys` absent |
+| GREEN/refactor | Same focused command → 15 passed |
+| Triangulation | `docker run --rm -v "${PWD}:/workspace" -w /workspace/backend python:3.12-slim sh -c "pip install --quiet -r requirements.txt pytest pytest-asyncio httpx argon2-cffi cryptography && python -m pytest -c pyproject.toml tests/test_keys_vault.py tests/test_operator_auth.py tests/test_multicanal_isolation.py tests/test_routers.py -q"` → 31 passed, 2 existing datetime deprecation warnings |
+| Runtime harness | `docker compose -f docker-compose.multicanal.yml --profile multicanal config --quiet` → exit 0; migration replay/isolation tests passed |
+| Security evidence | Header-only lookup; scoped HMAC verification uses constant-time comparison; plaintext is returned only by issuance result, never stored/audited; AES-256-GCM ciphertext, nonce, and key version persist; tamper/missing-key reads fail closed |
+| Changed paths | `backend/app/security_api_keys.py`, `backend/app/vault.py`, `backend/app/migrations/__init__.py`, `backend/app/config.py`, `backend/requirements.txt`, `backend/tests/test_keys_vault.py`, `backend/tests/test_multicanal_isolation.py`, `openspec/changes/multicanal/{tasks.md,apply-progress.md}` |
+| Authored count | 331 additions + deletions including tests and evidence; below the 390 S3 limit |
+| Cleanup | All Python runs used `--rm`; no persistent container, volume, network, original database, original Compose, commit, push, PR, review lifecycle, or native-attempt command was used |
+| Rollback boundary | Revert only the S3 paths above, remove migration version 3 (`api_keys`/`vault_secrets`) from the isolated multichannel database, and remove `cryptography`; retain S1/S2 guards, security tables, original `/chat`, original database, and original volume |
+
+## S3 status
+
+Only S3 is checked complete. S4–S14 remain pending and untouched. Residual risks: key/vault services are not yet exposed through Settings or channel configuration (deferred to S11); existing S2 datetime deprecation warnings remain.
+
+## S3 authorized review follow-up — ordinal 6
+
+- API-key verification now rolls back after audit-storage failure and returns only bounded HTTP 503 `API key verification unavailable`; audit internals are chained as the exception cause, not exposed in the response.
+- Rotation resolves the original public prefix to its UUID `api_keys.id` before storing `rotated_from`; prefix lookup and overlap behavior remain unchanged.
+- Strict-TDD RED tests failed for both defects, then focused `tests/test_keys_vault.py` passed 5 tests and combined S3/S2/S1/legacy `/chat` passed 32 tests with 2 existing SQLAlchemy datetime deprecation warnings.
+- Changed paths: `backend/app/security_api_keys.py`, `backend/tests/test_keys_vault.py`, `openspec/changes/multicanal/{tasks.md,apply-progress.md}`.
+- Authored follow-up count: 53 additions + deletions; cumulative S3 work remains within the authorized 120-line follow-up cap.
+- Rollback boundary: revert only this follow-up in the two backend files and these progress entries; S1/S2, later slices, original `/chat`, database, and volumes remain untouched.

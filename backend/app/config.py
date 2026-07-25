@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     operator_bootstrap_username: str = ""
     operator_bootstrap_password: str = ""
     operator_bootstrap_permissions: str = "multichannel:read"
+    multicanal_api_key_pepper_reference: str = "MULTICANAL_API_KEY_PEPPER"
+    multicanal_master_key_reference: str = "MULTICANAL_MASTER_KEY"
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://localhost:3000",

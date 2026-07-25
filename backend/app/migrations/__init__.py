@@ -27,6 +27,16 @@ CREATE TABLE audit_events (
 CREATE TRIGGER audit_events_no_update BEFORE UPDATE ON audit_events BEGIN SELECT RAISE(ABORT, 'audit is append-only'); END;
 CREATE TRIGGER audit_events_no_delete BEFORE DELETE ON audit_events BEGIN SELECT RAISE(ABORT, 'audit is append-only'); END"""
 MIGRATIONS[2] = SECURITY_SQL
+VAULT_KEYS_SQL = """CREATE TABLE api_keys (
+ id TEXT PRIMARY KEY, prefix TEXT NOT NULL UNIQUE, key_hash TEXT NOT NULL,
+ name TEXT NOT NULL, scopes TEXT NOT NULL, created_at INTEGER NOT NULL,
+ expires_at INTEGER, revoked_at INTEGER, overlap_until INTEGER,
+ rotated_from TEXT REFERENCES api_keys(id));
+CREATE INDEX api_keys_prefix_idx ON api_keys(prefix);
+CREATE TABLE vault_secrets (
+ name TEXT PRIMARY KEY, ciphertext BLOB NOT NULL, nonce BLOB NOT NULL,
+ key_version INTEGER NOT NULL, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)"""
+MIGRATIONS[3] = VAULT_KEYS_SQL
 
 
 class MigrationTargetError(RuntimeError):
