@@ -37,6 +37,32 @@ CREATE TABLE vault_secrets (
  name TEXT PRIMARY KEY, ciphertext BLOB NOT NULL, nonce BLOB NOT NULL,
  key_version INTEGER NOT NULL, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)"""
 MIGRATIONS[3] = VAULT_KEYS_SQL
+LEDGER_SQL = """CREATE TABLE channel_connections (
+ id TEXT PRIMARY KEY, channel TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'ready');
+CREATE TABLE contacts (
+ id TEXT PRIMARY KEY, customer_id TEXT, display_name TEXT, created_at INTEGER NOT NULL DEFAULT (unixepoch()), redacted INTEGER NOT NULL DEFAULT 0 CHECK(redacted IN (0,1)));
+CREATE TABLE channel_identities (
+ id TEXT PRIMARY KEY, connection_id TEXT NOT NULL REFERENCES channel_connections(id), contact_id TEXT NOT NULL REFERENCES contacts(id), provider_user_id TEXT NOT NULL, address TEXT, UNIQUE(connection_id, provider_user_id));
+CREATE TABLE chats (
+ id TEXT PRIMARY KEY, identity_id TEXT NOT NULL REFERENCES channel_identities(id), stage TEXT NOT NULL DEFAULT 'lead' CHECK(stage IN ('lead','payment_pending','sale_closed')), sequence INTEGER NOT NULL DEFAULT 0, owner_version INTEGER NOT NULL DEFAULT 0, config_version INTEGER NOT NULL DEFAULT 0, retention_until INTEGER, redacted INTEGER NOT NULL DEFAULT 0 CHECK(redacted IN (0,1)));
+CREATE TABLE messages (
+ id TEXT PRIMARY KEY, chat_id TEXT NOT NULL REFERENCES chats(id), connection_id TEXT NOT NULL REFERENCES channel_connections(id), provider_event_id TEXT NOT NULL, direction TEXT NOT NULL CHECK(direction IN ('inbound','outbound')), text_type TEXT NOT NULL CHECK(text_type='text'), content TEXT, status TEXT NOT NULL CHECK(status IN ('accepted','queued','sending','sent','retrying','failed','cancelled','unsupported','redacted')), sequence INTEGER NOT NULL, correlation_id TEXT, accepted_at INTEGER NOT NULL DEFAULT (unixepoch()), redacted INTEGER NOT NULL DEFAULT 0 CHECK(redacted IN (0,1)), UNIQUE(connection_id, provider_event_id), UNIQUE(chat_id, sequence));
+CREATE TABLE work_items (
+ id TEXT PRIMARY KEY, message_id TEXT NOT NULL REFERENCES messages(id), kind TEXT NOT NULL, cycle INTEGER NOT NULL DEFAULT 1 CHECK(cycle > 0), status TEXT NOT NULL CHECK(status IN ('ready','claimed','retry_wait','succeeded','dead','cancelled')), UNIQUE(message_id, kind, cycle));
+CREATE TABLE idempotency_records (
+ scope TEXT NOT NULL, key TEXT NOT NULL, request_hash TEXT NOT NULL, message_id TEXT NOT NULL REFERENCES messages(id), expires_at INTEGER, created_at INTEGER NOT NULL DEFAULT (unixepoch()), PRIMARY KEY(scope, key));
+CREATE TABLE delivery_attempts (
+ id TEXT PRIMARY KEY, work_id TEXT NOT NULL REFERENCES work_items(id), attempt INTEGER NOT NULL CHECK(attempt > 0), status TEXT NOT NULL, created_at INTEGER NOT NULL DEFAULT (unixepoch()), UNIQUE(work_id, attempt));
+CREATE TABLE event_ledger (
+ id TEXT PRIMARY KEY, connection_id TEXT NOT NULL REFERENCES channel_connections(id), provider_event_id TEXT NOT NULL, message_id TEXT NOT NULL REFERENCES messages(id), received_at INTEGER NOT NULL DEFAULT (unixepoch()), UNIQUE(connection_id, provider_event_id));
+CREATE INDEX messages_chat_order ON messages(chat_id, sequence);
+CREATE INDEX work_status ON work_items(status);
+CREATE INDEX retention_messages ON messages(accepted_at, redacted);
+CREATE TRIGGER chats_owner_version_monotonic BEFORE UPDATE OF owner_version ON chats
+WHEN NEW.owner_version < OLD.owner_version BEGIN SELECT RAISE(ABORT, 'owner version cannot decrease'); END;
+CREATE TRIGGER chats_config_version_monotonic BEFORE UPDATE OF config_version ON chats
+WHEN NEW.config_version < OLD.config_version BEGIN SELECT RAISE(ABORT, 'config version cannot decrease'); END;"""
+MIGRATIONS[4] = LEDGER_SQL
 
 
 class MigrationTargetError(RuntimeError):
@@ -116,6 +142,7 @@ def migrate(
 
     applied: list[int] = []
     with sqlite3.connect(target) as connection:
+        connection.execute("PRAGMA foreign_keys=ON")
         connection.execute("BEGIN")
         connection.execute(MIGRATION_SQL.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS"))
         rows = {

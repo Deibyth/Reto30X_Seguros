@@ -23,6 +23,7 @@ from app.models.session import Session  # noqa: E402, F401
 from app.models.opportunity import Opportunity  # noqa: E402, F401
 from app.models.notification import Notification  # noqa: E402, F401
 from app.models.interest_rate import InterestRate  # noqa: E402, F401
+from app.models.multichannel import LedgerConflict, insert_message, redact_message  # noqa: E402, F401
 
 __all__ = [
     "Base",
@@ -39,4 +40,7 @@ __all__ = [
     "Opportunity",
     "Notification",
     "InterestRate",
+    "LedgerConflict",
+    "insert_message",
+    "redact_message",
 ]
