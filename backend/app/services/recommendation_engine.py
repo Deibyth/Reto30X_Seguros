@@ -85,6 +85,8 @@ CATALOG_PRODUCTS: dict[str, dict[str, Any]] = {
         "categoria_producto": "Movilidad",
         "aseguradoras": "Allianz · Liberty · Sura · AXA Colpatria · Bolívar · Equidad · Mapfre · SBS · Mundial · GEA",
         "prima_base": 65_000,
+        "canal_venta": "colsubsidio",
+        "url_compra": "https://www.colsubsidio.com/seguros/vehiculos/carro",
     },
     "movilidad_bicicleta": {
         "nombre": "Bicicleta y patineta",
@@ -92,6 +94,8 @@ CATALOG_PRODUCTS: dict[str, dict[str, Any]] = {
         "categoria_producto": "Movilidad",
         "aseguradoras": "Allianz · Liberty · Sura · AXA Colpatria · Bolívar · Equidad · Mapfre · SBS · Mundial · GEA",
         "prima_base": 15_000,
+        "canal_venta": "colsubsidio",
+        "url_compra": "https://www.colsubsidio.com/seguros/vehiculos/carro",
     },
     "movilidad_soat": {
         "nombre": "SOAT",
@@ -99,6 +103,8 @@ CATALOG_PRODUCTS: dict[str, dict[str, Any]] = {
         "categoria_producto": "Movilidad",
         "aseguradoras": "Allianz · Liberty · Sura · AXA Colpatria · Bolívar · Equidad · Mapfre · SBS · Mundial · GEA",
         "prima_base": 0,  # Price depends on vehicle type, not consultive sale
+        "canal_venta": "externo",
+        "url_compra": "https://www.colsubsidio.com/seguros/vehiculos/soat",
     },
     "movilidad_asistencia_moto": {
         "nombre": "Asistencia moto",
@@ -106,6 +112,8 @@ CATALOG_PRODUCTS: dict[str, dict[str, Any]] = {
         "categoria_producto": "Movilidad",
         "aseguradoras": "Allianz · Liberty · Sura · AXA Colpatria · Bolívar · Equidad · Mapfre · SBS · Mundial · GEA",
         "prima_base": 25_000,
+        "canal_venta": "colsubsidio",
+        "url_compra": "https://www.colsubsidio.com/seguros/vehiculos/moto",
     },
     # — Mascotas —
     "mascotas_perro_gato": {
@@ -114,6 +122,8 @@ CATALOG_PRODUCTS: dict[str, dict[str, Any]] = {
         "categoria_producto": "Mascotas",
         "aseguradoras": "Sura · HDI · Mundial · GEA · VetPlus",
         "prima_base": 30_000,
+        "canal_venta": "colsubsidio",
+        "url_compra": "https://www.colsubsidio.com/seguros/mascotas/perro-gato",
     },
     "mascotas_asistencias_veterinarias": {
         "nombre": "Asistencias veterinarias",
@@ -121,6 +131,8 @@ CATALOG_PRODUCTS: dict[str, dict[str, Any]] = {
         "categoria_producto": "Mascotas",
         "aseguradoras": "Sura · HDI · Mundial · GEA · VetPlus",
         "prima_base": 18_000,
+        "canal_venta": "colsubsidio",
+        "url_compra": "https://www.colsubsidio.com/seguros/mascotas/perro-gato",
     },
     "mascotas_medicina_prepagada": {
         "nombre": "Medicina prepagada (mascota)",
@@ -128,6 +140,8 @@ CATALOG_PRODUCTS: dict[str, dict[str, Any]] = {
         "categoria_producto": "Mascotas",
         "aseguradoras": "Sura · HDI · Mundial · GEA · VetPlus",
         "prima_base": 45_000,
+        "canal_venta": "colsubsidio",
+        "url_compra": "https://www.colsubsidio.com/seguros/mascotas/perro-gato",
     },
     # — Hogar —
     "hogar_contenido": {
@@ -136,6 +150,8 @@ CATALOG_PRODUCTS: dict[str, dict[str, Any]] = {
         "categoria_producto": "Hogar",
         "aseguradoras": "Allianz · Liberty · Sura · AXA Colpatria · Bolívar · HDI · Mapfre · Estado · BBVA · Mundial",
         "prima_base": 35_000,
+        "canal_venta": "colsubsidio",
+        "url_compra": "https://www.colsubsidio.com/seguros/hogar/contenido",
     },
     "hogar_arrendamiento": {
         "nombre": "Arrendamiento",
@@ -143,6 +159,8 @@ CATALOG_PRODUCTS: dict[str, dict[str, Any]] = {
         "categoria_producto": "Hogar",
         "aseguradoras": "Allianz · Liberty · Sura · AXA Colpatria · Bolívar · HDI · Mapfre · Estado · BBVA · Mundial",
         "prima_base": 28_000,
+        "canal_venta": "colsubsidio",
+        "url_compra": "https://www.colsubsidio.com/seguros/hogar/arrendamiento",
     },
     # — Personal y familiar —
     "personal_vida": {
@@ -151,6 +169,8 @@ CATALOG_PRODUCTS: dict[str, dict[str, Any]] = {
         "categoria_producto": "Personal y familiar",
         "aseguradoras": "Pan American Life · MetLife · BMI · Chubb · Sura · Allianz",
         "prima_base": 45_000,
+        "canal_venta": "colsubsidio",
+        "url_compra": "https://www.colsubsidio.com/seguros/familiares/vida",
     },
     "personal_vida_ahorro": {
         "nombre": "Vida y ahorro",
@@ -158,6 +178,8 @@ CATALOG_PRODUCTS: dict[str, dict[str, Any]] = {
         "categoria_producto": "Personal y familiar",
         "aseguradoras": "Pan American Life · MetLife · BMI · Chubb · Sura · Allianz",
         "prima_base": 60_000,
+        "canal_venta": "colsubsidio",
+        "url_compra": "https://www.colsubsidio.com/seguros/familiares/vida-ahorro",
     },
     "personal_accidentes": {
         "nombre": "Accidentes personales",
@@ -165,6 +187,8 @@ CATALOG_PRODUCTS: dict[str, dict[str, Any]] = {
         "categoria_producto": "Personal y familiar",
         "aseguradoras": "Pan American Life · MetLife · BMI · Chubb · Sura · Allianz",
         "prima_base": 25_000,
+        "canal_venta": "colsubsidio",
+        "url_compra": "https://www.colsubsidio.com/seguros/familiares/accidentes",
     },
     "personal_accidentes_exequial": {
         "nombre": "Accidentes y exequial",
@@ -172,6 +196,8 @@ CATALOG_PRODUCTS: dict[str, dict[str, Any]] = {
         "categoria_producto": "Personal y familiar",
         "aseguradoras": "Grupo Recordar · GEA",
         "prima_base": 22_000,
+        "canal_venta": "colsubsidio",
+        "url_compra": "https://www.colsubsidio.com/seguros/personal/vida-exequial/poliza",
     },
     "personal_exequial": {
         "nombre": "Exequial",
@@ -179,6 +205,8 @@ CATALOG_PRODUCTS: dict[str, dict[str, Any]] = {
         "categoria_producto": "Personal y familiar",
         "aseguradoras": "Grupo Recordar · GEA",
         "prima_base": 12_000,
+        "canal_venta": "colsubsidio",
+        "url_compra": "https://www.colsubsidio.com/seguros/personal/vida-exequial/poliza",
     },
     "personal_salud": {
         "nombre": "Póliza de salud",
@@ -186,6 +214,8 @@ CATALOG_PRODUCTS: dict[str, dict[str, Any]] = {
         "categoria_producto": "Personal y familiar",
         "aseguradoras": "Sura · Allianz · Chubb",
         "prima_base": 80_000,
+        "canal_venta": "colsubsidio",
+        "url_compra": "https://www.colsubsidio.com/seguros/familiares/poliza-salud",
     },
     "personal_asistencias_medicas": {
         "nombre": "Asistencias médicas",
@@ -193,6 +223,8 @@ CATALOG_PRODUCTS: dict[str, dict[str, Any]] = {
         "categoria_producto": "Personal y familiar",
         "aseguradoras": "Sura · Allianz · Mok",
         "prima_base": 20_000,
+        "canal_venta": "colsubsidio",
+        "url_compra": "https://www.colsubsidio.com/seguros/personal/asistencias-multiples",
     },
     "personal_asistencia_viajes": {
         "nombre": "Asistencia en viajes",
@@ -200,6 +232,8 @@ CATALOG_PRODUCTS: dict[str, dict[str, Any]] = {
         "categoria_producto": "Personal y familiar",
         "aseguradoras": "Chubb · Allianz · Mok",
         "prima_base": 15_000,
+        "canal_venta": "colsubsidio",
+        "url_compra": "https://www.colsubsidio.com/seguros/personal/asistencias-multiples",
     },
     "personal_asistencias_multiples": {
         "nombre": "Asistencias múltiples",
@@ -207,6 +241,8 @@ CATALOG_PRODUCTS: dict[str, dict[str, Any]] = {
         "categoria_producto": "Personal y familiar",
         "aseguradoras": "Sura · Allianz · Mok",
         "prima_base": 35_000,
+        "canal_venta": "colsubsidio",
+        "url_compra": "https://www.colsubsidio.com/seguros/personal/asistencias-multiples",
     },
     "personal_asesoria_juridica": {
         "nombre": "Asesoría jurídica",
@@ -214,6 +250,8 @@ CATALOG_PRODUCTS: dict[str, dict[str, Any]] = {
         "categoria_producto": "Personal y familiar",
         "aseguradoras": "Legalcy",
         "prima_base": 10_000,
+        "canal_venta": "colsubsidio",
+        "url_compra": "https://www.colsubsidio.com/seguros",
     },
     # — Crédito —
     "credito_vida_deudor": {
@@ -223,6 +261,8 @@ CATALOG_PRODUCTS: dict[str, dict[str, Any]] = {
         "aseguradoras": "Pan American Life · Sura",
         "prima_base": 20_000,
         "solo_en_credito": True,
+        "canal_venta": "colsubsidio",
+        "url_compra": "https://www.colsubsidio.com/seguros/deudores-financieros/vida",
     },
     "credito_desempleo": {
         "nombre": "Desempleo",
@@ -231,6 +271,8 @@ CATALOG_PRODUCTS: dict[str, dict[str, Any]] = {
         "aseguradoras": "Pan American Life · Sura",
         "prima_base": 15_000,
         "solo_en_credito": True,
+        "canal_venta": "colsubsidio",
+        "url_compra": "https://www.colsubsidio.com/seguros/creditos",
     },
     "credito_incendio": {
         "nombre": "Incendio",
@@ -239,6 +281,155 @@ CATALOG_PRODUCTS: dict[str, dict[str, Any]] = {
         "aseguradoras": "Pan American Life · Sura",
         "prima_base": 10_000,
         "solo_en_credito": True,
+        "canal_venta": "colsubsidio",
+        "url_compra": "https://www.colsubsidio.com/seguros/creditos",
+    },
+    # — Externos: Allianz —
+    "ext_allianz_autos": {
+        "nombre": "Seguro Autos Allianz",
+        "descripcion": "Seguro todo riesgo para vehículos con Allianz",
+        "categoria_producto": "Movilidad",
+        "aseguradoras": "Allianz",
+        "prima_base": 0,
+        "canal_venta": "externo",
+        "url_compra": "https://allianzdigital.co/cotizar",
+    },
+    "ext_allianz_hogar": {
+        "nombre": "Seguro Hogar Allianz",
+        "descripcion": "Protección para hogar y contenido con Allianz",
+        "categoria_producto": "Hogar",
+        "aseguradoras": "Allianz",
+        "prima_base": 0,
+        "canal_venta": "externo",
+        "url_compra": "https://allianzdigital.co/cotizar-hogar",
+    },
+    # — Externos: HDI (ex-Liberty) —
+    "ext_hdi_autos": {
+        "nombre": "Seguro Autos HDI",
+        "descripcion": "Seguro vehicular con HDI Seguros (antes Liberty)",
+        "categoria_producto": "Movilidad",
+        "aseguradoras": "HDI (ex-Liberty)",
+        "prima_base": 0,
+        "canal_venta": "externo",
+        "url_compra": "https://tuseguro.hdiseguros.com.co/",
+    },
+    # — Externos: SURA —
+    "ext_sura_soat": {
+        "nombre": "SOAT SURA",
+        "descripcion": "Seguro Obligatorio de Accidentes de Tránsito con SURA",
+        "categoria_producto": "Movilidad",
+        "aseguradoras": "SURA",
+        "prima_base": 0,
+        "canal_venta": "externo",
+        "url_compra": "https://www.sura.co/seguros/personas/movilidad/soat",
+    },
+    "ext_sura_autos": {
+        "nombre": "Seguro Autos Digital SURA",
+        "descripcion": "Seguro de autos 100% digital con SURA",
+        "categoria_producto": "Movilidad",
+        "aseguradoras": "SURA",
+        "prima_base": 0,
+        "canal_venta": "externo",
+        "url_compra": "https://www.sura.co/seguros/personas/movilidad/autos/digital",
+    },
+    # — Externos: AXA Colpatria —
+    "ext_axa_autos": {
+        "nombre": "Seguro Autos AXA Colpatria",
+        "descripcion": "Seguro vehicular digital con AXA Colpatria",
+        "categoria_producto": "Movilidad",
+        "aseguradoras": "AXA Colpatria",
+        "prima_base": 0,
+        "canal_venta": "externo",
+        "url_compra": "https://digital.axacolpatria.co/seguro-de-autos",
+    },
+    "ext_axa_salud": {
+        "nombre": "Póliza de Salud AXA Colpatria",
+        "descripcion": "Póliza de salud integral con AXA Colpatria",
+        "categoria_producto": "Personal y familiar",
+        "aseguradoras": "AXA Colpatria",
+        "prima_base": 0,
+        "canal_venta": "externo",
+        "url_compra": "https://online.axacolpatria.co/salud",
+    },
+    # — Externos: Seguros Bolívar —
+    "ext_bolivar_autos": {
+        "nombre": "Seguro Autos Digital Bolívar",
+        "descripcion": "Seguro de autos digital con Seguros Bolívar",
+        "categoria_producto": "Movilidad",
+        "aseguradoras": "Seguros Bolívar",
+        "prima_base": 0,
+        "canal_venta": "externo",
+        "url_compra": "https://www.segurosbolivar.com/seguros-en-linea/seguro-autos-digital/",
+    },
+    # — Externos: La Equidad —
+    "ext_equidad_mascotas": {
+        "nombre": "Seguro Mascotas La Equidad",
+        "descripcion": "Seguro para mascotas con La Equidad Seguros",
+        "categoria_producto": "Mascotas",
+        "aseguradoras": "La Equidad",
+        "prima_base": 0,
+        "canal_venta": "externo",
+        "url_compra": "https://servicios.laequidadseguros.coop/store/seguro/mascotas",
+    },
+    # — Externos: Mapfre —
+    "ext_mapfre_autos": {
+        "nombre": "Seguro Autos Todo Riesgo Mapfre",
+        "descripcion": "Seguro todo riesgo vehicular con Mapfre",
+        "categoria_producto": "Movilidad",
+        "aseguradoras": "Mapfre",
+        "prima_base": 0,
+        "canal_venta": "externo",
+        "url_compra": "https://digital.mapfre.com.co/iModelWeb/vista/autoscme/autoscmeinicio.jsf",
+    },
+    # — Externos: Seguros Mundial —
+    "ext_mundial_soat": {
+        "nombre": "SOAT Seguros Mundial",
+        "descripcion": "SOAT con Seguros Mundial — compra 100% en línea",
+        "categoria_producto": "Movilidad",
+        "aseguradoras": "Seguros Mundial",
+        "prima_base": 0,
+        "canal_venta": "externo",
+        "url_compra": "https://www.soatmundial.com.co",
+    },
+    # — Externos: Seguros del Estado —
+    "ext_estado_soat": {
+        "nombre": "SOAT Seguros del Estado",
+        "descripcion": "SOAT con Seguros del Estado — compra en línea",
+        "categoria_producto": "Movilidad",
+        "aseguradoras": "Seguros del Estado",
+        "prima_base": 0,
+        "canal_venta": "externo",
+        "url_compra": "https://www.segurosdelestado.com/productos/productos/1107",
+    },
+    # — Externos: Pan American Life —
+    "ext_palig_vida": {
+        "nombre": "Seguro de Vida Pan American Life",
+        "descripcion": "Seguro de vida con Pan American Life — cotización en línea",
+        "categoria_producto": "Personal y familiar",
+        "aseguradoras": "Pan American Life",
+        "prima_base": 0,
+        "canal_venta": "externo",
+        "url_compra": "https://paligdirect.com/Quote/Life",
+    },
+    # — Externos: BMI Seguros —
+    "ext_bmi_vida_ahorro": {
+        "nombre": "Vida con Ahorro BMI",
+        "descripcion": "Seguro de vida con componente de ahorro — BMI Seguros",
+        "categoria_producto": "Personal y familiar",
+        "aseguradoras": "BMI Seguros",
+        "prima_base": 0,
+        "canal_venta": "externo",
+        "url_compra": "https://www.bmiahorro.com.co/seguro-vida/",
+    },
+    # — Externos: GEA Internacional —
+    "ext_gea_asistencias": {
+        "nombre": "Asistencias GEA Internacional",
+        "descripcion": "Asistencias múltiples con GEA Internacional — alianza Colsubsidio",
+        "categoria_producto": "Personal y familiar",
+        "aseguradoras": "GEA Internacional",
+        "prima_base": 0,
+        "canal_venta": "externo",
+        "url_compra": "https://colsubsidio.geainternacional.com/",
     },
 }
 
@@ -275,6 +466,22 @@ CATALOG_RULES: list[tuple[str, list[str | None], str, str, str | None]] = [
      "Protección dentro de crédito educativo", "NO se vende suelto: va DENTRO de un crédito"),
     ("credito_incendio",       ["01", "02", "03", "04", "05"], "medium",
      "Protección dentro de crédito educativo", "NO se vende suelto: va DENTRO de un crédito"),
+    # — Externos: alternativas para que Anna ofrezca con link —
+    ("ext_allianz_autos",      ["01", "03"],  "low", "Alternativa externa para {segmento_label}", None),
+    ("ext_hdi_autos",          ["01", "03"],  "low", "Alternativa externa para {segmento_label}", None),
+    ("ext_sura_autos",         ["01", "03"],  "low", "Alternativa externa para {segmento_label}", None),
+    ("ext_sura_soat",          [None],        "low", "SOAT disponible en línea con SURA", None),
+    ("ext_axa_autos",          ["01", "03"],  "low", "Alternativa externa para {segmento_label}", None),
+    ("ext_axa_salud",          ["02", "03", "04"], "low", "Alternativa externa para {segmento_label}", None),
+    ("ext_bolivar_autos",      ["01", "03"],  "low", "Alternativa externa para {segmento_label}", None),
+    ("ext_equidad_mascotas",   ["01"],        "low", "Alternativa externa para {segmento_label}", None),
+    ("ext_mapfre_autos",       ["01", "03"],  "low", "Alternativa externa para {segmento_label}", None),
+    ("ext_mundial_soat",       [None],        "low", "SOAT en línea con Seguros Mundial", None),
+    ("ext_estado_soat",        [None],        "low", "SOAT en línea con Seguros del Estado", None),
+    ("ext_palig_vida",         ["02", "03"],  "low", "Alternativa externa para {segmento_label}", None),
+    ("ext_bmi_vida_ahorro",    ["03"],        "low", "Alternativa externa para {segmento_label}", None),
+    ("ext_allianz_hogar",      ["03"],        "low", "Alternativa externa para {segmento_label}", None),
+    ("ext_gea_asistencias",    [None],        "low", "Asistencias alianza Colsubsidio–GEA", None),
 ]
 
 SEGMENTO_VIDA_LABELS: dict[str | None, str] = {
@@ -504,6 +711,8 @@ def match_products(profile: dict) -> list[dict[str, Any]]:
                 "prima_base": product["prima_base"],
                 "match_reason": _RULE_REASONS[product_id],
                 "confidence": _RULE_CONFIDENCE[product_id],
+                "canal_venta": "colsubsidio",
+                "url_compra": product.get("url_compra", "https://www.colsubsidio.com/seguros"),
             })
 
     # Sort: high confidence first, then prima_base descending
@@ -592,6 +801,8 @@ def _match_catalog_rules(
         info = {
             "aseguradoras": product.get("aseguradoras", ""),
             "categoria_producto": product.get("categoria_producto", ""),
+            "canal_venta": product.get("canal_venta", "colsubsidio"),
+            "url_compra": product.get("url_compra", ""),
         }
         if restriccion:
             info["restriccion"] = restriccion
@@ -687,6 +898,8 @@ def match_products_by_segment(
                 "prima_base": product["prima_base"],
                 "match_reason": reason,
                 "confidence": conf,
+                "canal_venta": "colsubsidio",
+                "url_compra": product.get("url_compra", "https://www.colsubsidio.com/seguros"),
             }
 
     # 5. Add catalog products via segmento_vida
@@ -705,6 +918,8 @@ def match_products_by_segment(
                     "match_reason": reason,
                     "confidence": conf,
                     "aseguradoras": info["aseguradoras"],
+                    "canal_venta": info.get("canal_venta", "colsubsidio"),
+                    "url_compra": info.get("url_compra", ""),
                 }
                 if "restriccion" in info:
                     result[pid]["restriccion"] = info["restriccion"]
@@ -742,6 +957,8 @@ def _merge_catalog_with_conversational(
                 "match_reason": reason,
                 "confidence": conf,
                 "aseguradoras": info["aseguradoras"],
+                "canal_venta": info.get("canal_venta", "colsubsidio"),
+                "url_compra": info.get("url_compra", ""),
             }
             if "restriccion" in info:
                 result_by_id[pid]["restriccion"] = info["restriccion"]
