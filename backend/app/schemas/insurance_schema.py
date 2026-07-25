@@ -147,7 +147,7 @@ SECTION_TOMADOR = FormSeccion("Datos del Tomador", [
 
 SECTION_COBERTURA = FormSeccion("Cobertura", [
     FormField("tipo_cobertura", "select", True,
-              "¿Qué tipo de cobertura necesitás?",
+              "¿Qué tipo de cobertura necesitas?",
               "Cobertura",
               options=[
                   "Fallecimiento",
@@ -155,11 +155,11 @@ SECTION_COBERTURA = FormSeccion("Cobertura", [
                   "Básica",
               ]),
     FormField("suma_asegurada", "number", True,
-              "¿Cuál es el monto que querés asegurar?",
+              "¿Cuál es el monto que quieres asegurar?",
               "Cobertura",
               validaciones={"min": 500_000, "max": 200_000_000}),
     FormField("coberturas_adicionales", "text", False,
-              "¿Querés incluir coberturas adicionales? Describí cuáles.",
+              "¿Quieres incluir coberturas adicionales? Describe cuáles.",
               "Cobertura"),
 ])
 
@@ -168,21 +168,24 @@ SECTION_BENEFICIARIO = FormSeccion("Beneficiario", [
               "¿Quién será el beneficiario del seguro? (nombre completo)",
               "Beneficiario"),
     FormField("beneficiario_parentesco", "select", False,
-              "¿Qué parentesco tenés con el beneficiario?",
+              "¿Qué parentesco tienes con el beneficiario?",
               "Beneficiario",
               options=["Cónyuge", "Hijo/a", "Padre", "Madre", "Hermano/a", "Otro"]),
 ])
 
 SECTION_PAGO = FormSeccion("Pago", [
     FormField("forma_pago", "select", True,
-              "¿Cómo querés pagar la prima?",
+              "¿Cómo quieres pagar la prima?",
               "Pago",
               options=["Mensual", "Trimestral", "Semestral", "Anual", "Único"]),
     FormField("cuenta_pago", "string", False,
               "¿Cuál es el número de cuenta para el débito?",
               "Pago"),
     FormField("acepta_terminos", "boolean", True,
-              "¿Aceptás los términos y condiciones del seguro?",
+              "¿Aceptas los términos y condiciones del seguro?",
+              "Pago"),
+    FormField("acepta_tratamiento_datos", "boolean", True,
+              "Autorización de tratamiento de datos personales (Ley 1581 de 2012)",
               "Pago"),
 ])
 
