@@ -25,7 +25,7 @@ def database(tmp_path):
 
 def test_migration_four_is_canonical_and_replay_safe(database):
     with sqlite3.connect(database) as db:
-        assert db.execute("SELECT version FROM multicanal_schema_migrations ORDER BY version").fetchall() == [(1,), (2,), (3,), (4,)]
+        assert db.execute("SELECT version FROM multicanal_schema_migrations ORDER BY version").fetchall() == [(1,), (2,), (3,), (4,), (5,)]
         names = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         assert {"contacts", "channel_identities", "chats", "messages", "work_items", "idempotency_records", "delivery_attempts", "event_ledger"} <= names
     assert migrate("multicanal", database, database.parent, "test")["applied"] == []
