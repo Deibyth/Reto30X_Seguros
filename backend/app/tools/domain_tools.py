@@ -612,6 +612,61 @@ async def create_application(
 # ══════════════════════════════════════════════
 
 
+_FIELD_NORMALIZER: dict[str, str] = {
+    # Mascotas variations
+    "mascota": "tiene_mascota",
+    "perro": "tiene_mascota",
+    "gato": "tiene_mascota",
+    "tiene_perro": "tiene_mascota",
+    "tiene_gato": "tiene_mascota",
+    "tipo_mascota": "tiene_mascota",
+    # Vehículo variations
+    "vehiculo": "tiene_vehiculo",
+    "tipo_vehiculo": "tiene_vehiculo",
+    "tiene_carro": "tiene_vehiculo",
+    "tiene_moto": "tiene_vehiculo",
+    "tiene_auto": "tiene_vehiculo",
+    # Hogar variations
+    "tiene_casa": "es_propietario_vivienda",
+    "tiene_vivienda": "es_propietario_vivienda",
+    "es_propietario": "es_propietario_vivienda",
+    "vivienda_propia": "es_propietario_vivienda",
+    # Vida variations
+    "tiene_hijos": "familia_con_hijos",
+    "tiene_familia": "familia_con_hijos",
+    "dependientes": "familia_con_hijos",
+    # Viajes variations
+    "viaja": "viaja_frecuentemente",
+    # Deuda variations
+    "deuda": "tiene_deuda_activa",
+    "credito": "tiene_deuda_activa",
+    "tiene_credito": "tiene_deuda_activa",
+    "tiene_deuda": "tiene_deuda_activa",
+}
+
+
+def _normalize_profile(profile: dict) -> None:
+    """Normalize AI-invented profile field names to engine expectations.
+
+    The AI often invents field names like ``"mascota": "perro"`` instead of
+    the canonical ``"tiene_mascota": true``. This function maps common
+    variations in-place before the recommendation engine processes them.
+    """
+    for old_key, canonical_key in _FIELD_NORMALIZER.items():
+        if old_key in profile and old_key != canonical_key:
+            # Transfer value to canonical key if not already set
+            if canonical_key not in profile:
+                val = profile.pop(old_key, None)
+                # Coerce truthy strings to True
+                if isinstance(val, str):
+                    profile[canonical_key] = val.lower() in (
+                        "true", "sí", "si", "yes", "perro", "gato", "carro",
+                        "moto", "casa", "apartamento",
+                    ) or bool(val)
+                else:
+                    profile[canonical_key] = bool(val) if canonical_key.startswith("tiene_") or canonical_key.startswith("es_") or canonical_key.startswith("familia_") or canonical_key.startswith("viaja_") else val
+
+
 @mcp.tool()
 def recommend_insurance(
     profile: dict,
@@ -632,6 +687,9 @@ def recommend_insurance(
     documento : str | None, optional
         Identity document number for enriched category+segment lookup.
     """
+    # --- Normalize AI-invented field names to engine expectations ---
+    _normalize_profile(profile)
+
     # Resolve categoria from documento or profile
     categoria: str | None = None
     segmento: str | None = None
@@ -703,14 +761,25 @@ def recommend_insurance(
         }.get(p["confidence"], p["confidence"])
         aseguradoras = p.get("aseguradoras")
         restriccion = p.get("restriccion")
+        canal = p.get("canal_venta", "colsubsidio")
+        url_compra = p.get("url_compra", "")
 
         detail = f"\n**{i}. {p['nombre']}**\n"
+        detail += f"   ID: `{p['product_id']}`\n"
         detail += f"   {p['descripcion']}\n"
-        detail += f"   Prima base: ${p['prima_base']:,} COP/mes\n"
+        if p['prima_base']:
+            detail += f"   Prima base: ${p['prima_base']:,} COP/mes\n"
         if aseguradoras:
             detail += f"   Aseguradoras: {aseguradoras}\n"
         if restriccion:
             detail += f"   ⚠️ {restriccion}\n"
+        # Canal de venta: colsubsidio (venta interna en chat) vs externo (redirigir a link)
+        if canal == "externo":
+            detail += f"   🔗 Canal: EXTERNO — Compra en: {url_compra}\n"
+        else:
+            detail += f"   🏢 Canal: COLSUBSIDIO — Venta directa en este chat\n"
+            if url_compra:
+                detail += f"   ℹ️ Más info: {url_compra}\n"
         detail += f"   {confidence_label}: {p['match_reason']}"
         lines.append(detail)
 
@@ -738,7 +807,7 @@ def quote_insurance(
         Product identifier: ``"vida"``, ``"accidentes"``, ``"viajes"``,
         ``"mascotas"``, ``"hogar"``, ``"movilidad"``.
     profile : dict
-        Member profile including ``edad``, used for age-based pricing.
+        Member profile (``edad`` is optional — quote works without it).
     coverage_level : str, optional
         Coverage tier: ``"basica"``, ``"estandar"`` (default), or ``"premium"``.
     """
@@ -769,23 +838,34 @@ def quote_insurance(
 
 @mcp.tool()
 async def create_policy(
-    customer_id: str,
     form_data: dict,
-    insurance_id: str,
+    customer_id: str = "",
+    insurance_id: str = "",
+    documento: str = "",
+    producto: str = "",
 ) -> str:
     """Create an insurance policy for a customer.
 
     Validates terms acceptance and creates an Application (tipo='seguro')
     and a Policy in a single atomic transaction.
 
+    You can identify the customer by **UUID** (``customer_id``) or by
+    **document number** (``documento``).  You can identify the insurance
+    product by **UUID** (``insurance_id``) or by **short product slug**
+    (``producto``, e.g. ``"mascotas"``, ``"vida"``, ``"hogar"``).
+
     Parameters
     ----------
-    customer_id : str
-        The customer's UUID.
     form_data : dict
         Collected form fields. MUST include ``acepta_terminos`` set to ``true``.
-    insurance_id : str
-        The insurance product UUID from the insurances table.
+    customer_id : str, optional
+        The customer's UUID (alternative to ``documento``).
+    insurance_id : str, optional
+        The insurance product UUID (alternative to ``producto``).
+    documento : str, optional
+        Customer identity document number, e.g. ``"1089875093"``.
+    producto : str, optional
+        Short product slug from the recommendation, e.g. ``"mascotas"``.
     """
     if async_session_maker is None:
         return "Error: la base de datos no está inicializada."
@@ -796,17 +876,68 @@ async def create_policy(
 
     async with async_session_maker() as session:
         try:
-            # Verify customer exists
-            customer = await session.get(Customer, customer_id)
+            # --- Resolve customer ---
+            resolved_customer_id = customer_id
+            if not resolved_customer_id and documento:
+                result = await session.execute(
+                    select(Customer).where(
+                        Customer.documento_identidad == documento
+                    )
+                )
+                cust = result.scalar_one_or_none()
+                if not cust:
+                    return (
+                        f"Error: no se encontró un cliente con el "
+                        f"documento '{documento}'."
+                    )
+                resolved_customer_id = cust.id
+            elif not resolved_customer_id:
+                return (
+                    "Error: debe proporcionar customer_id o documento "
+                    "para identificar al cliente."
+                )
+
+            customer = await session.get(Customer, resolved_customer_id)
             if not customer:
-                return f"Error: no se encontró el cliente con ID '{customer_id}'."
+                return f"Error: no se encontró el cliente con ID '{resolved_customer_id}'."
 
-            # Verify insurance exists
-            insurance = await session.get(Insurance, insurance_id)
+            # --- Resolve insurance ---
+            resolved_insurance_id = insurance_id
+            if not resolved_insurance_id and producto:
+                # Map short product slug to full name from PRODUCTS
+                from app.services.recommendation_engine import PRODUCTS
+                full_name = PRODUCTS.get(producto, {}).get("nombre")
+                if full_name:
+                    result = await session.execute(
+                        select(Insurance).where(Insurance.nombre == full_name)
+                    )
+                    ins = result.scalar_one_or_none()
+                    if ins:
+                        resolved_insurance_id = ins.id
+                if not resolved_insurance_id:
+                    # Fallback: try matching by nombre containing the slug
+                    result = await session.execute(
+                        select(Insurance).where(
+                            Insurance.nombre.ilike(f"%{producto}%")
+                        )
+                    )
+                    ins = result.scalar_one_or_none()
+                    if ins:
+                        resolved_insurance_id = ins.id
+            elif not resolved_insurance_id:
+                return (
+                    "Error: debe proporcionar insurance_id o producto "
+                    "para identificar el seguro."
+                )
+
+            insurance = await session.get(Insurance, resolved_insurance_id)
             if not insurance:
-                return f"Error: no se encontró el seguro con ID '{insurance_id}'."
+                return (
+                    f"Error: no se encontró el seguro con ID "
+                    f"'{resolved_insurance_id}'."
+                )
 
-            # Generate policy number
+            # --- Generate policy number ---
             import uuid as _uuid
             numero_poliza = f"POL-{_uuid.uuid4().hex[:8].upper()}"
 
@@ -814,7 +945,7 @@ async def create_policy(
 
             app = Application(
                 tipo="seguro",
-                customer_id=customer_id,
+                customer_id=resolved_customer_id,
                 form_data=form_data,
                 estado="iniciada",
             )
@@ -822,8 +953,8 @@ async def create_policy(
             await session.flush()
 
             policy = Policy(
-                customer_id=customer_id,
-                insurance_id=insurance_id,
+                customer_id=resolved_customer_id,
+                insurance_id=resolved_insurance_id,
                 numero_poliza=numero_poliza,
                 prima=insurance.prima_base or 0,
                 estado="activo",
