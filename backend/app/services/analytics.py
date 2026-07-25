@@ -1,6 +1,7 @@
 """Analytics service — pandas + raw SQL for dashboard data."""
 
 import logging
+import math
 from collections import Counter
 
 import pandas as pd
@@ -319,6 +320,99 @@ class AnalyticsService:
             "total_premiums": total_premiums,
             "claims_stats": claims_stats,
         }
+
+    async def get_supervision(self) -> list[dict]:
+        """Return all sessions with conversations for human-in-the-loop monitoring."""
+        sessions_df = await self._fetch_df(
+            "SELECT s.id, s.customer_id, s.estado_actual, s.ultima_intencion, "
+            "s.insurance_profile, s.campos_diligenciados, s.created_at, s.updated_at "
+            "FROM sessions s ORDER BY s.updated_at DESC"
+        )
+        if sessions_df.empty:
+            return []
+
+        # Get customer names
+        customer_ids = sessions_df["customer_id"].dropna().unique().tolist()
+        customer_map: dict[str, str] = {}
+        if customer_ids:
+            ids_str = ",".join(f"'{cid}'" for cid in customer_ids)
+            cust_df = await self._fetch_df(
+                f"SELECT id, nombre_completo FROM customers WHERE id IN ({ids_str})"
+            )
+            if not cust_df.empty:
+                customer_map = dict(zip(cust_df["id"], cust_df["nombre_completo"]))
+
+        # Get conversation counts per session
+        conv_count_df = await self._fetch_df(
+            "SELECT session_id, COUNT(*) as cnt FROM conversations GROUP BY session_id"
+        )
+        conv_counts: dict[str, int] = {}
+        if not conv_count_df.empty:
+            conv_counts = dict(
+                zip(conv_count_df["session_id"], conv_count_df["cnt"].astype(int))
+            )
+
+        # Get policy existence per session (policies reference customer_id)
+        policy_df = await self._fetch_df(
+            "SELECT DISTINCT customer_id FROM policies"
+        )
+        policy_customers: set[str] = set()
+        if not policy_df.empty:
+            policy_customers = set(policy_df["customer_id"])
+
+        # Get last 5 conversations for each session
+        conv_df = await self._fetch_df(
+            "SELECT session_id, rol, mensaje, created_at FROM conversations "
+            "ORDER BY session_id, created_at"
+        )
+
+        # Group conversations by session_id and take last 5
+        conv_groups: dict[str, list[dict]] = {}
+        if not conv_df.empty:
+            for _, row in conv_df.iterrows():
+                sid = str(row["session_id"])
+                if sid not in conv_groups:
+                    conv_groups[sid] = []
+                msg = row.get("mensaje", "") or ""
+                conv_groups[sid].append({
+                    "rol": row["rol"],
+                    "mensaje": msg[:200],
+                    "created_at": row["created_at"].isoformat() if hasattr(row["created_at"], "isoformat") else str(row["created_at"]),
+                })
+
+        def _safe(val, default=None):
+            """Convert NaN/None to default, otherwise return str(val)."""
+            if val is None or (isinstance(val, float) and math.isnan(val)):
+                return default
+            return val
+
+        result: list[dict] = []
+        for _, row in sessions_df.iterrows():
+            sid = str(row["id"])
+            cust_id = str(row["customer_id"]) if row["customer_id"] and not (isinstance(row["customer_id"], float) and math.isnan(row["customer_id"])) else None
+            insurance_profile = row.get("insurance_profile")
+            product_context = None
+            if isinstance(insurance_profile, dict):
+                product_context = insurance_profile.get("product_context")
+
+            session_convs = conv_groups.get(sid, [])
+            created_at = row.get("created_at")
+            updated_at = row.get("updated_at")
+            result.append({
+                "id": sid,
+                "customer_id": cust_id,
+                "customer_name": customer_map.get(cust_id) if cust_id else None,
+                "estado_actual": _safe(row.get("estado_actual"), ""),
+                "product_context": _safe(product_context),
+                "ultima_intencion": _safe(row.get("ultima_intencion")),
+                "created_at": created_at.isoformat() if hasattr(created_at, "isoformat") else str(created_at) if created_at else "",
+                "updated_at": updated_at.isoformat() if hasattr(updated_at, "isoformat") else str(updated_at) if updated_at else "",
+                "conversations": session_convs[-5:],
+                "total_messages": conv_counts.get(sid, 0),
+                "has_policy": cust_id in policy_customers if cust_id else False,
+            })
+
+        return result
 
     async def get_full_summary(self) -> dict:
         pipeline = await self.get_pipeline_summary()

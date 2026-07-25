@@ -1,7 +1,8 @@
-"""TTSService — ElevenLabs TTS with MD5-based audio cache.
+"""TTSService — ElevenLabs TTS with MD5-based audio cache and Cloudinary upload.
 
 Generates speech from text using ElevenLabs API. Caches results by MD5 hash
-to avoid redundant API calls. Falls back to None on any failure — never raises.
+to avoid redundant API calls. Optionally uploads to Cloudinary for persistent
+storage accessible from WhatsApp. Falls back to None on any failure — never raises.
 """
 
 import hashlib
@@ -18,7 +19,7 @@ BUDGET_LIMIT = 9500  # Leave 500-char margin on free tier (10K/month)
 
 
 class TTSService:
-    """Generate TTS audio from text with caching and budget tracking."""
+    """Generate TTS audio from text with caching, budget tracking, and optional Cloudinary upload."""
 
     def __init__(
         self,
@@ -26,16 +27,19 @@ class TTSService:
         voice_id: str,
         static_dir: str,
         budget_path: str,
+        cloudinary_service: object | None = None,
     ) -> None:
         self._api_key = api_key
         self._voice_id = voice_id
         self._static_dir = static_dir
         self._budget_path = budget_path
+        self._cloudinary = cloudinary_service
 
     async def generate(self, text: str) -> str | None:
-        """Generate audio for *text* and return URL path, or None on failure.
+        """Generate audio for *text* and return URL, or None on failure.
 
-        Returns ``/audio/{md5_hash}.mp3`` on success.
+        Returns a Cloudinary URL when upload succeeds, otherwise returns the
+        local ``/audio/{md5_hash}.mp3`` path.
         """
         if not text:
             return None
@@ -50,6 +54,11 @@ class TTSService:
         cache_path = self._get_cache_path(md5)
         if cache_path.exists():
             logger.debug("TTS cache hit: %s", md5)
+            # If cached locally, still try to upload if Cloudinary is enabled
+            # and we haven't uploaded before (idempotent upload)
+            cloudinary_url = await self._upload_to_cloudinary(cache_path, md5)
+            if cloudinary_url:
+                return cloudinary_url
             return f"/audio/{md5}.mp3"
 
         # 3. Call API
@@ -62,10 +71,26 @@ class TTSService:
         cache_path.write_bytes(audio_data)
         logger.debug("TTS cache saved: %s (%d bytes)", md5, len(audio_data))
 
-        # 5. Update budget
+        # 5. Upload to Cloudinary (async, best-effort)
+        cloudinary_url = await self._upload_to_cloudinary(cache_path, md5)
+
+        # 6. Update budget
         self._update_budget(text)
 
+        if cloudinary_url:
+            return cloudinary_url
         return f"/audio/{md5}.mp3"
+
+    async def _upload_to_cloudinary(self, local_path: Path, md5: str) -> str | None:
+        """Upload audio to Cloudinary if service is available."""
+        if self._cloudinary is None:
+            return None
+        if not getattr(self._cloudinary, "enabled", False):
+            return None
+        return await self._cloudinary.upload_audio(
+            local_path=local_path,
+            public_id=f"anna_audio/{md5}",
+        )
 
     async def _call_elevenlabs(self, text: str) -> bytes | None:
         """Call ElevenLabs TTS API. Returns raw MP3 bytes or None on failure."""

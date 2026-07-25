@@ -120,6 +120,44 @@ class ToolBridge:
             })
         return result
 
+    def _normalize_profile_args(self, name: str, full_args: dict[str, Any]) -> None:
+        """Mutate ``full_args`` in place: wrap root-level profile fields
+        under ``profile`` if the tool expects one but the model sent fields
+        directly at root level.
+
+        Some models (e.g. Qwen on Groq) emit flattened fields like
+        ``{"tiene_mascota": true}`` instead of the canonical
+        ``{"profile": {"tiene_mascota": true}}``.
+
+        Detection logic: if the tool declares a ``profile: object`` parameter
+        and ``full_args`` lacks a ``profile`` key, any keys that are NOT
+        recognised root-level parameters of the tool are presumed to be
+        profile fields and get bundled under ``profile``.
+        """
+        tool = self._tool_cache.get(name)
+        if tool is None or tool.parameters is None:
+            return
+        props = tool.parameters.get("properties", {})
+        profile_schema = props.get("profile")
+        if profile_schema is None or profile_schema.get("type") != "object":
+            return
+        # profile key already present → nothing to normalise
+        if "profile" in full_args:
+            return
+        # Determine which root-level params are NOT ``profile``
+        root_params: set[str] = set(props.keys()) - {"profile"}
+        # Any argument key that is NOT a recognised root param is likely a
+        # profile field.
+        arg_keys = set(full_args.keys())
+        profile_candidates = arg_keys - root_params
+        if not profile_candidates:
+            return
+        profile_dict: dict[str, Any] = {}
+        for key in list(full_args.keys()):
+            if key not in root_params:
+                profile_dict[key] = full_args.pop(key)
+        full_args["profile"] = profile_dict
+
     async def execute_tool(self, name: str, arguments: dict[str, Any]) -> str:
         """Execute a tool by name with the given arguments.
 
@@ -131,8 +169,11 @@ class ToolBridge:
         if tool is None:
             raise ValueError(f"Unknown tool: '{name}'")
 
-        # Inject per-tool hidden params
+        # Normalise profile arguments (models sometimes flatten profile fields)
         full_args = dict(arguments)
+        self._normalize_profile_args(name, full_args)
+
+        # Inject per-tool hidden params
         hidden = self.HIDDEN_PARAMS.get(name, set())
         if "session_id" in hidden and self.current_session_id:
             full_args.setdefault("session_id", self.current_session_id)
