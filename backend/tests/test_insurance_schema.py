@@ -130,6 +130,7 @@ class TestInsuranceFormSchema:
             "tipo_cobertura", "suma_asegurada", "coberturas_adicionales",
             "beneficiario_nombre", "beneficiario_parentesco",
             "forma_pago", "cuenta_pago", "acepta_terminos",
+            "acepta_tratamiento_datos",
         }
         missing = expected - field_names
         assert not missing, f"Missing fields: {missing}"
@@ -160,6 +161,7 @@ class TestInsuranceFormSchema:
         assert "suma_asegurada" in req_names
         assert "forma_pago" in req_names
         assert "acepta_terminos" in req_names
+        assert "acepta_tratamiento_datos" in req_names
         assert all(c.requerido for c in required)
 
     def test_optional_fields(self):

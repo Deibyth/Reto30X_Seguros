@@ -87,6 +87,7 @@ class TestBuildSystemPrompt:
 
     def test_build_system_prompt_includes_formschema(self):
         session = self._make_session()
+        session.estado_actual = "recopilando_datos_seguro"
         prompt = self._build_prompt(session)
         assert "ESQUEMA DEL FORMULARIO DE SEGURO" in prompt
         assert "REQ" in prompt
@@ -95,8 +96,7 @@ class TestBuildSystemPrompt:
         session = self._make_session()
         prompt = self._build_prompt(session)
         assert "PERFILACIÓN CONVERSACIONAL" in prompt
-        assert "PRODUCTOS DISPONIBLES" in prompt
-        assert "Seguro de Vida" in prompt
+        assert "MODO PERFILADO" in prompt
 
     def test_build_system_prompt_includes_context_aware_profiling(self):
         """When product_context is movilidad, shows vehicle-specific questions."""
@@ -104,25 +104,27 @@ class TestBuildSystemPrompt:
             insurance_profile={"product_context": "movilidad"}
         )
         prompt = self._build_prompt(session)
-        assert "CONTEXTO DETECTADO" in prompt
+        assert "ACCIÓN INMEDIATA REQUERIDA" in prompt
         assert "VEHÍCULO" in prompt
-        assert "marca, modelo y año" in prompt
+        assert "recommend_insurance" in prompt
 
     def test_build_system_prompt_includes_collection_state(self):
         session = self._make_session(campos={"nombre": "Juan"})
+        session.estado_actual = "recopilando_datos_seguro"
         prompt = self._build_prompt(session)
         assert "ESTADO DE RECOLECCIÓN" in prompt
         assert "nombre" in prompt
 
     def test_build_system_prompt_includes_tool_instructions(self):
         session = self._make_session()
+        session.estado_actual = "recopilando_datos_seguro"
         prompt = self._build_prompt(session)
         assert "INSTRUCCIONES DE RECOLECCIÓN (SEGURO)" in prompt
         assert "save_form_field" in prompt
         assert "create_policy" in prompt
 
     def test_build_system_prompt_in_insurance_states(self):
-        """Insurance fragment present in any insurance state."""
+        """Profiling instructions present in any insurance state."""
         session = self._make_session()
         prompt = self._build_prompt(session)
         assert "PERFILACIÓN CONVERSACIONAL" in prompt
@@ -133,6 +135,7 @@ class TestBuildSystemPrompt:
         session.estado_actual = "inicio"
         prompt = self._build_prompt(session)
         assert "ESQUEMA DEL FORMULARIO" not in prompt
+        assert "MODO PERFILADO" not in prompt
 
 
 class TestComputeCompletitudPct:
@@ -156,7 +159,8 @@ class TestComputeCompletitudPct:
         half_filled = {f.nombre: "test" for f in all_required[:half_count]}
         session = self._make_session(campos=half_filled)
         pct = ChatService._compute_completitud_pct(session)
-        assert pct == 50.0
+        expected = round((half_count / len(all_required)) * 100, 1)
+        assert pct == expected, f"expected {expected}, got {pct}"
 
     def test_one_hundred_percent_all_required(self):
         from app.schemas.insurance_schema import InsuranceFormSchema
