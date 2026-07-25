@@ -96,6 +96,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             api_key=settings.llm_api_key,
             model=settings.llm_model,
             base_url=settings.llm_base_url,
+            tools_mode=settings.llm_tools_mode,
         )
         app.state.ai_client = ai_client
         logger.info(
@@ -114,7 +115,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.tool_bridge = tool_bridge
     logger.info("ToolBridge initialized")
 
-    # 6. Initialize Voice Services (TTS/STT — optional, requires ELEVENLABS_API_KEY)
+    # 6. Initialize Cloudinary service (optional audio storage)
+    cloudinary_service = None
+    if settings.cloudinary_url:
+        from app.services.cloudinary_upload import CloudinaryUploadService
+
+        cloudinary_service = CloudinaryUploadService(settings.cloudinary_url)
+        app.state.cloudinary_service = cloudinary_service
+
+    # 7. Initialize Voice Services (TTS/STT — optional, requires ELEVENLABS_API_KEY)
     tts_service = None
     stt_service = None
     if settings.elevenlabs_api_key:
@@ -129,6 +138,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             voice_id=settings.elevenlabs_voice_id,
             static_dir=static_audio_dir,
             budget_path=budget_path,
+            cloudinary_service=cloudinary_service,
         )
         stt_service = STTService(api_key=settings.elevenlabs_api_key)
         app.state.tts_service = tts_service
@@ -139,7 +149,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     else:
         logger.info("Voice services not initialized — no ELEVENLABS_API_KEY")
 
-    # 7. Initialize ChatService (orchestrates AI + tools + persistence)
+    # 8. Initialize ChatService (orchestrates AI + tools + persistence)
     if ai_client is not None and db.async_session_maker is not None:
         from app.services.chat import ChatService
 
@@ -156,7 +166,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.chat_service = None
         logger.warning("ChatService not initialized — chat will use echo fallback")
 
-    # 7. Initialize OutboundService (proactive messaging)
+    # 9. Initialize OutboundService (proactive messaging)
     from app.services.outbound_service import OutboundService
 
     outbound_service = OutboundService(
@@ -167,7 +177,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.outbound_service = outbound_service
     logger.info("OutboundService initialized")
 
-    # 8. Initialize AnalyticsService (dashboard data aggregation)
+    # 10. Initialize AnalyticsService (dashboard data aggregation)
     from app.services.analytics import AnalyticsService
 
     if db.async_session_maker is not None:
@@ -178,7 +188,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.analytics_service = None
         logger.warning("AnalyticsService not initialized — no database session maker")
 
-    # 9. Start outbound scheduler (proactive messaging)
+    # 11. Start outbound scheduler (proactive messaging)
     if db.async_session_maker is not None:
         from app.scheduler import OutboundScheduler
 
@@ -249,6 +259,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     # Register routers
     from app.routers.analytics import router as analytics_router
+    from app.routers.auth import router as auth_router
     from app.routers.chat import router as chat_router
     from app.routers.health import router as health_router
     from app.routers.outbound import router as outbound_router
@@ -256,6 +267,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health_router)
     app.include_router(chat_router)
     app.include_router(analytics_router)
+    app.include_router(auth_router)
     app.include_router(outbound_router)
 
     # Serve cached TTS audio files
