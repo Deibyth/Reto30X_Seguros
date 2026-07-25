@@ -111,3 +111,29 @@ Only S3 is checked complete. S4–S14 remain pending and untouched. Residual ris
 - Changed paths: `backend/app/security_api_keys.py`, `backend/tests/test_keys_vault.py`, `openspec/changes/multicanal/{tasks.md,apply-progress.md}`.
 - Authored follow-up count: 53 additions + deletions; cumulative S3 work remains within the authorized 120-line follow-up cap.
 - Rollback boundary: revert only this follow-up in the two backend files and these progress entries; S1/S2, later slices, original `/chat`, database, and volumes remain untouched.
+
+## S4 evidence — canonical ledger
+
+| Evidence | Result |
+|---|---|
+| Mode | Strict TDD, Python 3.12 in disposable `python:3.12-slim`; no secrets or provider/runtime code added |
+| RED | Focused `tests/test_multichannel_models.py` collection failed because `app.models.multichannel` was absent |
+| GREEN/refactor | Focused `tests/test_multichannel_models.py tests/test_multicanal_isolation.py` → 16 passed; final combined S4 + S3 keys/vault + S2 auth + S1 isolation + legacy routers → 37 passed, 2 pre-existing SQLAlchemy datetime deprecation warnings |
+| Schema/migration | Migration 4 creates connections, contacts, identities, chats, messages, work, idempotency, attempts, event ledger, indexes, retention state, and monotonic version guards; replay applies `[]` and checksum is recorded |
+| Constraint evidence | Unique `(connection, provider_user_id)`, `(connection, provider_event_id)`, `(chat, sequence)`, scoped idempotency, and `(message, kind, cycle)` constraints; foreign-parent rejection and redaction non-replay tested |
+| Runtime harness | `docker compose -f docker-compose.multicanal.yml --profile multicanal config --quiet` → exit 0; disposable Docker test runs used `--rm` |
+| TDD cycle | RED → GREEN → triangulation for duplicate identity/event, conflicting replay, ordering, foreign references, redaction, checksum, and migration replay |
+| Changed paths | `backend/app/migrations/__init__.py`, `backend/app/models/{__init__.py,multichannel.py}`, `backend/tests/{test_multichannel_models.py,test_multicanal_isolation.py}`, `openspec/changes/multicanal/{tasks.md,apply-progress.md}` |
+| Authored count | 206 additions + deletions including tests and progress; below the 390-line S4 limit |
+| Cleanup | All test containers were disposable; no original database/volume, commit, push, PR, review lifecycle, or native-attempt command was used |
+| Rollback boundary | Revert only the S4 model/migration/tests/progress paths and remove isolated migration version 4; retain S1-S3 migrations, guards, security tables, original `/chat`, database, and volume |
+
+## S4 TDD cycle evidence
+
+| Task | Test file | Layer | Safety net | RED | GREEN | TRIANGULATE | REFACTOR |
+|---|---|---|---|---|---|---|---|
+| S4 | `backend/tests/test_multichannel_models.py` | Integration | S3/S1 baseline: 31 passed | Missing model module | 16 focused passed | duplicate identity/event, ordering, invalid parent, redaction, checksum/replay | savepoint rollback, indexes, monotonic version triggers; 37 combined passed |
+
+## S4 status
+
+S1, S2, S3, and S4 are checked complete. S5–S14 remain pending. Residual risks: worker claims, routing/handoff, transports, APIs, CRM, UI, and retention execution are intentionally deferred to later slices.
