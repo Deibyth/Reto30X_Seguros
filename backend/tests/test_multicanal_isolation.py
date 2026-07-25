@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+import app.migrations as migrations
 from app.migrations import MigrationTargetError, database_path, migrate
 
 
@@ -99,7 +100,7 @@ def test_versioned_migration_only_touches_isolated_database(databases):
     target = root / DATABASE
 
     dry_run = migrate("multicanal", target, root, IDENTITY, dry_run=True)
-    assert dry_run == {"target": str(target), "pending": [1], "applied": []}
+    assert dry_run == {"target": str(target), "pending": [1, 2], "applied": []}
     assert not target.exists()
 
     result = migrate("multicanal", target, root, IDENTITY)
@@ -108,7 +109,7 @@ def test_versioned_migration_only_touches_isolated_database(databases):
         row = connection.execute(
             "SELECT version, deployment_id FROM multicanal_schema_migrations"
         ).fetchone()
-    assert result["applied"] == [1]
+    assert result["applied"] == [1, 2]
     assert replay["applied"] == []
     assert row == (1, IDENTITY)
     assert snapshot(original) == before
@@ -127,6 +128,41 @@ def test_existing_foreign_database_is_rejected_without_mutation(databases):
         migrate("multicanal", target, root, IDENTITY)
 
     assert snapshot(target) == before
+
+
+def test_interrupted_security_migration_rolls_back_and_replays(databases, monkeypatch):
+    _original, root = databases
+    write_identity(root)
+    target = root / DATABASE
+    checksum = hashlib.sha256(migrations.MIGRATION_SQL.encode()).hexdigest()
+    with sqlite3.connect(target) as connection:
+        connection.execute(migrations.MIGRATION_SQL)
+        connection.execute(
+            "INSERT INTO multicanal_schema_migrations(version, checksum, deployment_id) "
+            "VALUES (1, ?, ?)", (checksum, IDENTITY)
+        )
+
+    def interrupt(connection, sql):
+        connection.execute("CREATE TABLE operators (id TEXT PRIMARY KEY)")
+        raise RuntimeError("simulated interruption")
+
+    monkeypatch.setattr(migrations, "_execute_migration_sql", interrupt)
+    with pytest.raises(RuntimeError, match="simulated interruption"):
+        migrate("multicanal", target, root, IDENTITY)
+
+    with sqlite3.connect(target) as connection:
+        tables = tuple(connection.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+        ))
+        applied = tuple(connection.execute(
+            "SELECT version FROM multicanal_schema_migrations ORDER BY version"
+        ))
+    assert ("operators",) not in tables
+    assert applied == ((1,),)
+
+    monkeypatch.undo()
+    assert migrate("multicanal", target, root, IDENTITY)["applied"] == [2]
+    assert migrate("multicanal", target, root, IDENTITY)["applied"] == []
 
 
 def test_absolute_sqlalchemy_url_resolves_to_compose_target():

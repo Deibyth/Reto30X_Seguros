@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     app_profile: str = "original"
     multicanal_deployment_id: str = ""
     multicanal_root: str = "/app/multicanal-data"
+    operator_bootstrap_username: str = ""
+    operator_bootstrap_password: str = ""
+    operator_bootstrap_permissions: str = "multichannel:read"
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://localhost:3000",

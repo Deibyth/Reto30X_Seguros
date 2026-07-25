@@ -14,6 +14,19 @@ version INTEGER PRIMARY KEY, checksum TEXT NOT NULL,
 deployment_id TEXT NOT NULL, applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 )"""
 MIGRATIONS = {1: MIGRATION_SQL}
+SECURITY_SQL = """CREATE TABLE operators (
+ id TEXT PRIMARY KEY, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL,
+ permissions TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1);
+CREATE TABLE operator_sessions (
+ id TEXT PRIMARY KEY, operator_id TEXT NOT NULL REFERENCES operators(id),
+ csrf_token TEXT NOT NULL, created_at INTEGER NOT NULL, last_seen INTEGER NOT NULL,
+ expires_at INTEGER NOT NULL, revoked_at INTEGER);
+CREATE TABLE audit_events (
+ id TEXT PRIMARY KEY, actor_id TEXT, action TEXT NOT NULL, target TEXT NOT NULL,
+ outcome TEXT NOT NULL, details TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL);
+CREATE TRIGGER audit_events_no_update BEFORE UPDATE ON audit_events BEGIN SELECT RAISE(ABORT, 'audit is append-only'); END;
+CREATE TRIGGER audit_events_no_delete BEFORE DELETE ON audit_events BEGIN SELECT RAISE(ABORT, 'audit is append-only'); END"""
+MIGRATIONS[2] = SECURITY_SQL
 
 
 class MigrationTargetError(RuntimeError):
@@ -64,6 +77,17 @@ def _validate_existing_database(target: Path, deployment_id: str) -> None:
         raise MigrationTargetError("existing database identity mismatch")
 
 
+def _execute_migration_sql(connection: sqlite3.Connection, sql: str) -> None:
+    statement = ""
+    for character in sql:
+        statement += character
+        if character == ";" and sqlite3.complete_statement(statement):
+            connection.execute(statement)
+            statement = ""
+    if statement.strip():
+        connection.execute(statement)
+
+
 def migrate(
     profile: str,
     target: Path,
@@ -82,6 +106,7 @@ def migrate(
 
     applied: list[int] = []
     with sqlite3.connect(target) as connection:
+        connection.execute("BEGIN")
         connection.execute(MIGRATION_SQL.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS"))
         rows = {
             row[0]: (row[1], row[2])
@@ -96,6 +121,8 @@ def migrate(
                     raise MigrationTargetError("migration checksum or database identity mismatch")
                 pending.remove(version)
             elif not dry_run:
+                if version != 1:
+                    _execute_migration_sql(connection, sql)
                 connection.execute(
                     "INSERT INTO multicanal_schema_migrations(version, checksum, deployment_id) VALUES(?,?,?)",
                     (version, checksum, deployment_id),

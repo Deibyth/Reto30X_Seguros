@@ -12,3 +12,4 @@ openai==1.58.0
 pandas>=2.2.0
 apscheduler>=3.10.4
 httpx>=0.28.0
+argon2-cffi>=23.1.0

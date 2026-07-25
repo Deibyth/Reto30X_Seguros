@@ -78,6 +78,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     async with engine.begin() as conn:  # type: ignore[union-attr]
         await conn.run_sync(Base.metadata.create_all)
 
+    if settings.app_profile == "multicanal":
+        from app.security import initialize_security
+        async with db.async_session_maker() as security_db:
+            await initialize_security(security_db, settings)
+
     logger.info("Database tables created successfully")
 
     # 3. Initialize SegmentDataService (loads affiliate CSV dataset)
@@ -264,11 +269,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     from app.routers.chat import router as chat_router
     from app.routers.health import router as health_router
     from app.routers.outbound import router as outbound_router
+    from app.routers.auth import boundary_router, router as auth_router
 
     app.include_router(health_router)
     app.include_router(chat_router)
     app.include_router(analytics_router)
     app.include_router(outbound_router)
+    app.include_router(auth_router)
+    app.include_router(boundary_router)
 
     # Serve cached TTS audio files
     audio_static_dir = os.path.join(
