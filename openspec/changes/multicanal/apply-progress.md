@@ -3,7 +3,11 @@
 ## Completed work units
 
 - [x] S1 — Isolation and guarded migrations
-- [ ] S2–S14 — Not started
+- [x] S2 — Operator security foundation
+- [x] S3 — API keys and encrypted vault
+- [x] S4 — Canonical ledger
+- [x] S5 — Worker, routing, and handoff
+- [ ] S6–S14 — Not started
 
 ## S1 evidence
 
@@ -136,4 +140,29 @@ Only S3 is checked complete. S4–S14 remain pending and untouched. Residual ris
 
 ## S4 status
 
-S1, S2, S3, and S4 are checked complete. S5–S14 remain pending. Residual risks: worker claims, routing/handoff, transports, APIs, CRM, UI, and retention execution are intentionally deferred to later slices.
+S1, S2, S3, S4, and S5 are checked complete. S6–S14 remain pending. Residual risks: transports, APIs, CRM, UI, and retention execution are intentionally deferred to later slices.
+
+## S5 evidence — worker, routing, and handoff
+
+| Evidence | Result |
+|---|---|
+| Mode | Strict TDD, Python 3.12 in disposable `python:3.12-slim`; no provider transports or secrets added |
+| RED | Focused `tests/test_worker_handoff.py` collection failed because `app.multicanal` was absent |
+| GREEN | Focused S5 command → 4 passed |
+| TRIANGULATION | Combined S5 + S4 ledger + S3 vault + S2 auth + S1 isolation + legacy routers → 41 passed, 2 existing SQLAlchemy datetime deprecation warnings |
+| Migration | Checksummed migration 5 adds isolated lease/fence columns and singleton `worker_leases`; replay returns no applied versions; original profile remains untouched |
+| Runtime harness | Disposable Python 3.12 worker state-machine harness exercised ordered claim, lease recovery, stale fencing, singleton rejection, retry/dead-letter, route snapshot, takeover, transfer, and release |
+| Changed paths | `backend/app/migrations/__init__.py`, `backend/app/multichannel/{__init__,worker,routing,handoff}.py`, `backend/tests/{test_worker_handoff.py,test_multichannel_models.py,test_multicanal_isolation.py}`, `openspec/changes/multicanal/{tasks,apply-progress}.md` |
+| Authored count | 298 additions + deletions, below the 380-line S5 limit |
+| Cleanup | All test runs used disposable `--rm` containers; no persistent container, volume, network, original database, commit, push, PR, review lifecycle, or native-attempt command was used |
+| Rollback boundary | Revert only S5 modules/tests/progress and migration 5; remove only migration-5 lease/fence columns and `worker_leases` from isolated storage; retain S1-S4, original `/chat`, database, and volume |
+
+## S5 TDD cycle evidence
+
+| Task | Test file | Layer | Safety net | RED | GREEN | TRIANGULATE | REFACTOR |
+|---|---|---|---|---|---|---|---|
+| S5 | `backend/tests/test_worker_handoff.py` | Integration/unit | S4 + S3 + S2 + S1 + legacy: 37 passed | Missing worker/routing/handoff package | 4 passed | overtaking, stale/competing workers, recovery, retry/dead, route validation, takeover/transfer/release | fenced claims, bounded backoff, atomic suppression; combined 41 passed |
+
+## S5 status
+
+S1, S2, S3, S4, and S5 are checked complete. S6–S14 remain pending. Residual risks: provider transports, HTTP APIs, CRM, UI, retention execution, and operational bridge remain intentionally deferred.

@@ -63,6 +63,19 @@ WHEN NEW.owner_version < OLD.owner_version BEGIN SELECT RAISE(ABORT, 'owner vers
 CREATE TRIGGER chats_config_version_monotonic BEFORE UPDATE OF config_version ON chats
 WHEN NEW.config_version < OLD.config_version BEGIN SELECT RAISE(ABORT, 'config version cannot decrease'); END;"""
 MIGRATIONS[4] = LEDGER_SQL
+WORKER_SQL = """ALTER TABLE chats ADD COLUMN owner_id TEXT;
+ALTER TABLE work_items ADD COLUMN lease_owner TEXT;
+ALTER TABLE work_items ADD COLUMN lease_token TEXT;
+ALTER TABLE work_items ADD COLUMN lease_expires_at INTEGER;
+ALTER TABLE work_items ADD COLUMN attempt_count INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE work_items ADD COLUMN available_at INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE work_items ADD COLUMN owner_version INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE work_items ADD COLUMN config_version INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE work_items ADD COLUMN route TEXT;
+CREATE TABLE worker_leases (
+ owner TEXT PRIMARY KEY, lease_token TEXT NOT NULL, expires_at INTEGER NOT NULL
+);"""
+MIGRATIONS[5] = WORKER_SQL
 
 
 class MigrationTargetError(RuntimeError):
