@@ -206,7 +206,9 @@ class OutboundService:
                     f"Debe cerrar de forma amable, algo como: "
                     f"'Si te interesa, estaré atenta a cualquier indicación que me des.' "
                     f"No hagas preguntas directas de momento. "
-                    f"NO incluyas 'STOP' ni 'responder STOP' ni 'darse de baja'."
+                    f"NO incluyas 'STOP' ni 'responder STOP' ni 'darse de baja'. "
+                    f"TONO: Usa SIEMPRE 'tú' (tuteo colombiano neutro). "
+                    f"NUNCA uses 'vos', 'contás', 'tenés' ni voseo."
                 )
                 result = await self._ai_client.chat_raw(
                     openai_messages=[
