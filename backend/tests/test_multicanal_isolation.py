@@ -100,7 +100,7 @@ def test_versioned_migration_only_touches_isolated_database(databases):
     target = root / DATABASE
 
     dry_run = migrate("multicanal", target, root, IDENTITY, dry_run=True)
-    assert dry_run == {"target": str(target), "pending": [1, 2], "applied": []}
+    assert dry_run == {"target": str(target), "pending": [1, 2, 3], "applied": []}
     assert not target.exists()
 
     result = migrate("multicanal", target, root, IDENTITY)
@@ -109,7 +109,7 @@ def test_versioned_migration_only_touches_isolated_database(databases):
         row = connection.execute(
             "SELECT version, deployment_id FROM multicanal_schema_migrations"
         ).fetchone()
-    assert result["applied"] == [1, 2]
+    assert result["applied"] == [1, 2, 3]
     assert replay["applied"] == []
     assert row == (1, IDENTITY)
     assert snapshot(original) == before
@@ -161,7 +161,7 @@ def test_interrupted_security_migration_rolls_back_and_replays(databases, monkey
     assert applied == ((1,),)
 
     monkeypatch.undo()
-    assert migrate("multicanal", target, root, IDENTITY)["applied"] == [2]
+    assert migrate("multicanal", target, root, IDENTITY)["applied"] == [2, 3]
     assert migrate("multicanal", target, root, IDENTITY)["applied"] == []
 
 
