@@ -18,17 +18,26 @@ class Settings(BaseSettings):
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://localhost:3000",
+        "https://acknowledged-slim-role-sandy.trycloudflare.com",
     ]
 
     # LLM Provider (OpenAI-compatible — any provider)
     llm_api_key: str = ""
     llm_model: str = "Qwen/Qwen3-14B"
     llm_base_url: str = ""
+    # Tools mode: "native" (default, works with OpenAI/Anthropic/most providers)
+    # or "prompt" (inject tools as text in system prompt — needed for Groq
+    # free-tier, Gemini OpenAI-compat endpoint, and providers lacking native
+    # tool_calls support)
+    llm_tools_mode: str = "native"
 
     # ElevenLabs Voice (TTS + STT) — optional
     elevenlabs_api_key: str = ""
     elevenlabs_voice_id: str = "Xb7hH8MSUJpSbSDYk0k2"
     elevenlabs_agent_id: str = ""
+
+    # Cloudinary (audio storage) — optional
+    cloudinary_url: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",
