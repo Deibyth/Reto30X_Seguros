@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     debug: bool = False
     environment: str = "development"
     database_url: str = "sqlite+aiosqlite:///data/proteccion360.db"
+    app_profile: str = "original"
+    multicanal_deployment_id: str = ""
+    multicanal_root: str = "/app/multicanal-data"
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://localhost:3000",

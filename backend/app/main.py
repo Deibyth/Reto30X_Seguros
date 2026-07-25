@@ -57,6 +57,18 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         settings.environment,
     )
 
+    if settings.app_profile == "multicanal":
+        from pathlib import Path
+
+        from app.migrations import database_path, migrate
+
+        migrate(
+            settings.app_profile,
+            database_path(settings.database_url),
+            Path(settings.multicanal_root),
+            settings.multicanal_deployment_id,
+        )
+
     # 1. Initialize async database engine
     init_engine(settings.database_url, echo=settings.debug)
 

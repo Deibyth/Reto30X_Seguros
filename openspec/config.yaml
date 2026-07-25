@@ -1,36 +1,20 @@
-# openspec/config.yaml
 schema: spec-driven
 
 context: |
-  ProteccionInteligente360 — AI-driven member protection platform for Colsubsidio affiliates.
-  Monorepo with Python backend and React frontend.
+  Product: ProteccionInteligente360, an AI-assisted insurance platform for Colsubsidio affiliates.
+  Stack: Python 3.12, FastAPI, Pydantic, async SQLAlchemy/SQLite, FastMCP, OpenAI-compatible AI, and APScheduler.
+  Frontend: React 18, TypeScript 5.7 strict mode, Vite 6, Tailwind CSS, TanStack Query, and pnpm 9 on Node 20.
+  Architecture: layered modular monolith with FastAPI routers, services, models/database, AI/tool adapters, and outbound scheduling.
+  Delivery: Docker Compose runs the backend and frontend; the current change branch is feature/multicanal.
+  Testing: pytest unit/integration suite with async and HTTP support; no frontend test runner or E2E suite.
+  Quality: frontend strict TypeScript build; no configured linter or formatter.
 
-  ## Stack
-
-  ### Backend
-  - Python 3.12, FastAPI 0.115.6, SQLAlchemy 2.0 async + aiosqlite, Pydantic 2.10
-  - OpenAI SDK 1.58 via FastMCP (provider-agnostic; configured for Groq)
-  - Dependency management: pip + requirements.txt
-  - No linter, formatter, or type checker configured
-
-  ### Frontend
-  - Vite 6, React 18, TypeScript 5.7 (strict mode), TailwindCSS 3.4, shadcn/ui
-  - framer-motion, TanStack Query, Recharts
-  - Package manager: pnpm 9.15.4
-  - No test runner or linter configured
-
-  ### Database
-  - SQLite + aiosqlite (async via SQLAlchemy 2.0)
-
-  ### Orquestación
-  - Docker Compose: uvicorn --reload (backend) + pnpm dev (frontend)
-
-  ### Testing & Quality
-  - Backend: pytest + pytest-asyncio + pytest-cov (9 test files, integration via httpx TestClient)
-  - Frontend: no test runner configured, TypeScript strict mode (build-time only)
-  - No linter, formatter, or type checker configured (backend)
-
-  Indie team, greenfield. Hackathon: Colsubsidio x 30X.
+workflow:
+  execution_mode: interactive
+  artifact_store:
+    mode: hybrid
+  chained_pr_strategy: force-chained
+  review_budget_lines: 400
 
 rules:
   proposal:
@@ -48,23 +32,32 @@ rules:
     guidelines:
       - Follow existing code patterns
     tdd: true
-    test_command: "pytest backend/tests/ -x -q"
+    test_command: "python -m pytest -c backend/pyproject.toml backend/tests -x -q"
   verify:
-    test_command: "pytest backend/tests/ -x -q"
-    build_command: ""
+    test_command: "python -m pytest -c backend/pyproject.toml backend/tests -x -q"
+    build_command: "pnpm --dir frontend run build"
     coverage_threshold: 60
   archive:
     - Warn before merging destructive deltas
 
 testing:
   strict_tdd: true
-  test_runner: pytest
+  detected: "2026-07-24"
+  test_runner:
+    framework: pytest
+    command: "python -m pytest -c backend/pyproject.toml backend/tests -x -q"
+    environment: "Python 3.12 with backend test extras"
   layers:
-    unit: pytest + pytest-asyncio
-    integration: httpx (FastAPI TestClient)
+    unit: "pytest + pytest-asyncio"
+    integration: "httpx + FastAPI TestClient"
     e2e: null
-  coverage: pytest-cov
+  coverage:
+    tool: pytest-cov
+    command: "python -m pytest -c backend/pyproject.toml backend/tests --cov=app --cov-report=term-missing"
+    threshold: 60
   quality:
     linter: null
-    type_checker: TypeScript strict (frontend build-time only)
+    type_checker:
+      tool: "TypeScript strict mode"
+      command: "pnpm --dir frontend run build"
     formatter: null

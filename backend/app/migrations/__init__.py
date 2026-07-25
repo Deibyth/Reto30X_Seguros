@@ -1,0 +1,110 @@
+"""Fail-closed, versioned migrations for isolated multichannel storage."""
+
+import hashlib
+import json
+import sqlite3
+from pathlib import Path
+from urllib.parse import unquote, urlparse
+
+SENTINEL = "proteccion360-multicanal-v1"
+DATABASE_NAME = "proteccion360_multicanal.db"
+SENTINEL_NAME = ".multicanal-identity.json"
+MIGRATION_SQL = """CREATE TABLE multicanal_schema_migrations (
+version INTEGER PRIMARY KEY, checksum TEXT NOT NULL,
+deployment_id TEXT NOT NULL, applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+)"""
+MIGRATIONS = {1: MIGRATION_SQL}
+
+
+class MigrationTargetError(RuntimeError):
+    """The requested migration target did not prove its isolation identity."""
+
+
+def database_path(database_url: str) -> Path:
+    """Return an absolute SQLite path from an explicit SQLAlchemy URL."""
+    if not database_url.startswith(("sqlite:////", "sqlite+aiosqlite:////")):
+        raise MigrationTargetError("the SQLite database URL must contain an absolute path")
+    parsed = urlparse(database_url.replace("sqlite+aiosqlite", "sqlite", 1))
+    if parsed.scheme != "sqlite" or not parsed.path:
+        raise MigrationTargetError("an explicit SQLite database URL is required")
+    path = Path("/" + unquote(parsed.path).lstrip("/"))
+    if not path.is_absolute():
+        raise MigrationTargetError("the SQLite database path must be absolute")
+    return path
+
+
+def _validate_target(profile: str, target: Path, root: Path, deployment_id: str) -> None:
+    if profile != "multicanal" or not deployment_id:
+        raise MigrationTargetError("multicanal profile and deployment identity are required")
+    if not target.is_absolute() or not root.is_absolute() or target.name != DATABASE_NAME:
+        raise MigrationTargetError("migration target does not match multicanal path policy")
+    if target.parent != root or target.is_symlink() or root.is_symlink():
+        raise MigrationTargetError("symlink and path aliases are forbidden")
+    try:
+        if root.resolve(strict=True) != root or target.parent.resolve(strict=True) != root:
+            raise MigrationTargetError("resolved migration root does not match policy")
+        identity = json.loads((root / SENTINEL_NAME).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise MigrationTargetError("multicanal identity sentinel is missing or invalid") from error
+    if identity != {"sentinel": SENTINEL, "deployment_id": deployment_id}:
+        raise MigrationTargetError("multicanal sentinel or deployment identity mismatch")
+
+
+def _validate_existing_database(target: Path, deployment_id: str) -> None:
+    checksum = hashlib.sha256(MIGRATION_SQL.encode()).hexdigest()
+    try:
+        with sqlite3.connect(f"{target.as_uri()}?mode=ro", uri=True) as connection:
+            identity = connection.execute(
+                "SELECT checksum, deployment_id FROM multicanal_schema_migrations "
+                "WHERE version = 1"
+            ).fetchone()
+    except sqlite3.Error as error:
+        raise MigrationTargetError("existing database has no multicanal identity") from error
+    if identity != (checksum, deployment_id):
+        raise MigrationTargetError("existing database identity mismatch")
+
+
+def migrate(
+    profile: str,
+    target: Path,
+    root: Path,
+    deployment_id: str,
+    *,
+    dry_run: bool = False,
+) -> dict[str, object]:
+    """Validate first, then transactionally apply checksummed migrations once."""
+    _validate_target(profile, target, root, deployment_id)
+    if target.exists():
+        _validate_existing_database(target, deployment_id)
+    pending = list(MIGRATIONS)
+    if dry_run and not target.exists():
+        return {"target": str(target), "pending": pending, "applied": []}
+
+    applied: list[int] = []
+    with sqlite3.connect(target) as connection:
+        connection.execute(MIGRATION_SQL.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS"))
+        rows = {
+            row[0]: (row[1], row[2])
+            for row in connection.execute(
+                "SELECT version, checksum, deployment_id FROM multicanal_schema_migrations"
+            )
+        }
+        for version, sql in MIGRATIONS.items():
+            checksum = hashlib.sha256(sql.encode()).hexdigest()
+            if version in rows:
+                if rows[version] != (checksum, deployment_id):
+                    raise MigrationTargetError("migration checksum or database identity mismatch")
+                pending.remove(version)
+            elif not dry_run:
+                connection.execute(
+                    "INSERT INTO multicanal_schema_migrations(version, checksum, deployment_id) VALUES(?,?,?)",
+                    (version, checksum, deployment_id),
+                )
+                applied.append(version)
+                pending.remove(version)
+        if dry_run:
+            connection.rollback()
+    return {"target": str(target), "pending": pending, "applied": applied}
+
+
+__all__ = ["MigrationTargetError", "database_path", "migrate"]

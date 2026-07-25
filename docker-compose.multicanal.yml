@@ -1,0 +1,27 @@
+services:
+  backend:
+    profiles: [multicanal]
+    build: ./backend
+    ports: ["8001:8000"]
+    volumes:
+      - ./backend:/app
+      - proteccion360_multicanal_data:/app/multicanal-data
+      - ./backend/multicanal-identity.json:/app/multicanal-data/.multicanal-identity.json:ro
+    environment:
+      APP_PROFILE: multicanal
+      MULTICANAL_DEPLOYMENT_ID: proteccion360-multicanal-v1
+      MULTICANAL_ROOT: /app/multicanal-data
+      DATABASE_URL: sqlite+aiosqlite:////app/multicanal-data/proteccion360_multicanal.db
+      ENVIRONMENT: development
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+  frontend:
+    profiles: [multicanal]
+    build: ./frontend
+    ports: ["5174:5173"]
+    depends_on: [backend]
+    environment:
+      VITE_API_URL: http://localhost:8001
+
+volumes:
+  proteccion360_multicanal_data:
