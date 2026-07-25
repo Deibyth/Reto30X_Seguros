@@ -5,6 +5,7 @@ interface ChatResponse {
   timestamp: string;
   session_id: string;
   model: string;
+  buttons?: Array<{ label: string; value: string }>;
 }
 
 interface HealthResponse {

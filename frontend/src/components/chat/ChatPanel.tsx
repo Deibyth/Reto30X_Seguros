@@ -10,10 +10,16 @@ const api = new ApiClient();
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
+interface ButtonDef {
+  label: string;
+  value: string;
+}
+
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+  buttons?: ButtonDef[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -93,15 +99,36 @@ function ChatSkeleton() {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Auto-link content — converts URLs to clickable <a> tags           */
+/* ------------------------------------------------------------------ */
+
+const URL_REGEX = /(https?:\/\/[^\s<]+[^\s<.,;:!?])/g;
+
+function AutoLinkContent({ text }: { text: string }) {
+  if (!text) return null;
+  const parts = text.split(URL_REGEX);
+  return (
+    <p className="whitespace-pre-wrap">
+      {parts.map((part, i) =>
+        URL_REGEX.test(part)
+          ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 text-colsubsidio-blue hover:text-colsubsidio-blue/80">{part}</a>
+          : part,
+      )}
+    </p>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Message Bubble                                                     */
 /* ------------------------------------------------------------------ */
 
 interface MessageBubbleProps {
   message: Message;
   index: number;
+  onButtonClick: (value: string) => void;
 }
 
-function MessageBubble({ message, index }: MessageBubbleProps) {
+function MessageBubble({ message, index, onButtonClick }: MessageBubbleProps) {
   const isUser = message.role === "user";
 
   return (
@@ -109,31 +136,48 @@ function MessageBubble({ message, index }: MessageBubbleProps) {
       initial={{ opacity: 0, y: 12, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.25, delay: index * 0.04 }}
-      className={`flex items-start gap-3 px-4 py-2 ${
-        isUser ? "flex-row-reverse" : ""
+      className={`flex flex-col items-start gap-2 px-4 py-2 ${
+        isUser ? "items-end" : ""
       }`}
     >
-      {/* Avatar */}
-      <div
-        className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-          isUser
-            ? "bg-colsubsidio-blue text-white"
-            : "bg-colsubsidio-yellow text-colsubsidio-dark"
-        }`}
-      >
-        {isUser ? "T" : "PI"}
+      <div className={`flex items-start gap-3 ${isUser ? "flex-row-reverse" : ""}`}>
+        {/* Avatar */}
+        <div
+          className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+            isUser
+              ? "bg-colsubsidio-blue text-white"
+              : "bg-colsubsidio-yellow text-colsubsidio-dark"
+          }`}
+        >
+          {isUser ? "T" : "PI"}
+        </div>
+
+        {/* Bubble */}
+        <div
+          className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+            isUser
+              ? "bg-colsubsidio-blue text-white rounded-tr-md"
+              : "bg-muted text-foreground rounded-tl-md"
+          }`}
+        >
+          <AutoLinkContent text={message.content} />
+        </div>
       </div>
 
-      {/* Bubble */}
-      <div
-        className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-          isUser
-            ? "bg-colsubsidio-blue text-white rounded-tr-md"
-            : "bg-muted text-foreground rounded-tl-md"
-        }`}
-      >
-        <p className="whitespace-pre-wrap">{message.content}</p>
-      </div>
+      {/* Action buttons (assistant only) */}
+      {!isUser && message.buttons && message.buttons.length > 0 && (
+        <div className="flex flex-wrap gap-2 pl-11">
+          {message.buttons.map((btn) => (
+            <button
+              key={btn.value}
+              onClick={() => onButtonClick(btn.value)}
+              className="rounded-full border border-colsubsidio-blue/30 bg-white px-4 py-1.5 text-sm font-medium text-colsubsidio-blue transition-all hover:bg-colsubsidio-blue hover:text-white"
+            >
+              {btn.label}
+            </button>
+          ))}
+        </div>
+      )}
     </motion.div>
   );
 }
@@ -149,6 +193,27 @@ export function ChatPanel() {
   const inputRef = useRef<HTMLInputElement>(null);
   const isAtBottomRef = useRef(true);
   const [hasInitialized, setHasInitialized] = useState(false);
+
+  /* ---- Mutation ---- */
+  const mutation = useMutation<ChatResponse, Error, string>({
+    mutationFn: (message: string) => api.sendMessage(message),
+    onSuccess: (data) => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `ai-${Date.now()}`,
+          role: "assistant",
+          content: data.reply,
+          buttons: data.buttons,
+        },
+      ]);
+    },
+    onError: () => {
+      // Error is shown via mutation.isError — no state change needed
+    },
+  });
+
+  const isLoading = mutation.isPending;
 
   /* ---- check scroll position ---- */
   const handleScroll = useCallback(() => {
@@ -167,30 +232,12 @@ export function ChatPanel() {
         behavior: "smooth",
       });
     }
-  }, [messages]);
+  }, [messages, isLoading]);
 
   /* ---- Mark as initialized after first render ---- */
   useEffect(() => {
     setHasInitialized(true);
   }, []);
-
-  /* ---- Mutation ---- */
-  const mutation = useMutation<ChatResponse, Error, string>({
-    mutationFn: (message: string) => api.sendMessage(message),
-    onSuccess: (data) => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `ai-${Date.now()}`,
-          role: "assistant",
-          content: data.reply,
-        },
-      ]);
-    },
-    onError: () => {
-      // Error is shown via mutation.isError — no state change needed
-    },
-  });
 
   /* ---- Send handler ---- */
   const handleSend = useCallback(() => {
@@ -229,26 +276,37 @@ export function ChatPanel() {
     }
   }, [messages, mutation]);
 
+  /* ---- Button click (sends button value as user message) ---- */
+  const handleButtonClick = useCallback(
+    (value: string) => {
+      const userMsg: Message = {
+        id: `user-${Date.now()}`,
+        role: "user",
+        content: value,
+      };
+      setMessages((prev) => [...prev, userMsg]);
+      mutation.mutate(value);
+    },
+    [mutation],
+  );
+
   /* ---- Reset error ---- */
   const handleDismissError = useCallback(() => {
     mutation.reset();
   }, [mutation]);
 
-  /* ---- Derived state ---- */
-  const isLoading = mutation.isPending;
-
   /* ---- Render ---- */
   return (
     <div className="mx-auto flex h-[75vh] w-full flex-col md:max-w-[800px]">
       {/* Messages list */}
-      <div className="relative flex-1 overflow-y-auto border rounded-t-xl bg-card py-4">
+      <div
+        ref={listRef}
+        onScroll={handleScroll}
+        className="relative flex-1 overflow-y-auto border rounded-t-xl bg-card py-4"
+      >
         <TangramDecorations />
 
-        <div
-          ref={listRef}
-          onScroll={handleScroll}
-          className="relative z-10 space-y-1"
-        >
+        <div className="relative z-10 space-y-1">
           {!hasInitialized ? (
             <ChatSkeleton />
           ) : messages.length === 0 && !isLoading ? (
@@ -277,7 +335,7 @@ export function ChatPanel() {
             <>
               <AnimatePresence initial={false}>
                 {messages.map((msg, i) => (
-                  <MessageBubble key={msg.id} message={msg} index={i} />
+                  <MessageBubble key={msg.id} message={msg} index={i} onButtonClick={handleButtonClick} />
                 ))}
               </AnimatePresence>
 

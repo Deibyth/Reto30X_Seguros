@@ -1,11 +1,15 @@
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { LogOut } from "lucide-react";
 
 interface HeaderProps {
   onNavigate?: (view: "chat" | "dashboard") => void;
   currentView?: "chat" | "dashboard";
+  token?: string | null;
+  userName?: string;
+  onLogout?: () => void;
 }
 
-export function Header({ onNavigate, currentView }: HeaderProps) {
+export function Header({ onNavigate, currentView, token, userName, onLogout }: HeaderProps) {
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex items-center justify-between px-4 py-3">
@@ -55,6 +59,20 @@ export function Header({ onNavigate, currentView }: HeaderProps) {
           <span className="text-sm font-medium text-muted-foreground sm:text-base">
             Protección Inteligente 360°
           </span>
+
+          {token && (
+            <>
+              <span className="text-xs text-muted-foreground">{userName}</span>
+              <button
+                onClick={onLogout}
+                className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:text-destructive"
+                title="Cerrar sesión"
+              >
+                <LogOut className="size-3.5" />
+              </button>
+            </>
+          )}
+
           <ThemeToggle />
         </div>
       </div>

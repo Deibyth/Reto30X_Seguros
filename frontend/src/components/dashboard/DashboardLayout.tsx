@@ -1,11 +1,13 @@
 import { useState } from "react";
+import { LoginScreen } from "@/components/auth/LoginScreen";
 import { PipelinePanel } from "./PipelinePanel";
 import { TrendsPanel } from "./TrendsPanel";
 import { CustomerPanel } from "./CustomerPanel";
 import { EfficiencyPanel } from "./EfficiencyPanel";
 import { InsurancePanel } from "./InsurancePanel";
+import { SupervisionPanel } from "./SupervisionPanel";
 
-type Tab = "pipeline" | "trends" | "customers" | "insurance" | "ai";
+type Tab = "pipeline" | "trends" | "customers" | "insurance" | "ai" | "supervision";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "pipeline", label: "Pipeline" },
@@ -13,10 +15,25 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "customers", label: "Clientes" },
   { id: "insurance", label: "Seguros" },
   { id: "ai", label: "AI" },
+  { id: "supervision", label: "Supervisión" },
 ];
 
-export function DashboardLayout() {
+interface DashboardLayoutProps {
+  token: string | null;
+  onLogin: (token: string, name: string) => void;
+}
+
+export function DashboardLayout({ token, onLogin }: DashboardLayoutProps) {
   const [activeTab, setActiveTab] = useState<Tab>("pipeline");
+
+  // If not authenticated, show login
+  if (!token) {
+    return (
+      <main className="container mx-auto px-4 py-8">
+        <LoginScreen onLogin={onLogin} />
+      </main>
+    );
+  }
 
   return (
     <main className="container mx-auto px-4 py-8">
@@ -44,6 +61,7 @@ export function DashboardLayout() {
         {activeTab === "customers" && <CustomerPanel />}
         {activeTab === "insurance" && <InsurancePanel />}
         {activeTab === "ai" && <EfficiencyPanel />}
+        {activeTab === "supervision" && <SupervisionPanel token={token} />}
       </div>
     </main>
   );

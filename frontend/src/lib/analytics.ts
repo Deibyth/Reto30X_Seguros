@@ -101,3 +101,31 @@ export async function fetchEfficiency(): Promise<AIEfficiency> {
   if (!res.ok) throw new Error("Failed to fetch efficiency");
   return res.json();
 }
+
+export interface SupervisionMessage {
+  rol: "user" | "assistant";
+  mensaje: string;
+  created_at: string;
+}
+
+export interface SupervisionSession {
+  id: string;
+  customer_id: string | null;
+  customer_name: string | null;
+  estado_actual: string;
+  product_context: string | null;
+  ultima_intencion: string;
+  created_at: string;
+  updated_at: string;
+  conversations: SupervisionMessage[];
+  total_messages: number;
+  has_policy: boolean;
+}
+
+export async function fetchSupervision(token: string): Promise<SupervisionSession[]> {
+  const res = await fetch("/api/analytics/supervision", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error("Failed to fetch supervision data");
+  return res.json();
+}
