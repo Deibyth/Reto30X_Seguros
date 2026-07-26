@@ -186,16 +186,35 @@ class OutboundService:
             prospects.sort(key=lambda p: p.score, reverse=True)
             return prospects[:limit]
 
+    @staticmethod
+    def _product_type_to_label(product_type: str) -> str:
+        """Convert internal product type to user-friendly label."""
+        labels = {
+            "movilidad": "seguro de movilidad (vehículo/moto)",
+            "vida": "seguro de vida",
+            "hogar": "seguro de hogar",
+            "mascotas": "seguro para mascotas",
+            "viajes": "seguro de viajes",
+            "accidentes": "seguro de accidentes personales",
+            "credito": "crédito",
+        }
+        return labels.get(product_type, "seguro")
+
     async def generate_message(self, prospect: Prospect) -> str:
         content = ""
+        product_label = self._product_type_to_label(prospect.recommended_product_type)
+        
         if self._ai_client:
             try:
                 system_prompt = (
                     f"Eres Anna, asesora de Colsubsidio. "
                     f"Genera un mensaje corto y natural para WhatsApp dirigido a "
                     f"{prospect.customer.nombre_completo}. "
-                    f"El mensaje debe comunicar que revisando su perfil encontramos "
-                    f"viabilidad para la obtencion de un seguro. "
+                    f"El mensaje debe comunicar ESPECÍFICAMENTE que revisando su perfil "
+                    f"encontramos viabilidad para {product_label}. "
+                    f"DEBES MENCIONAR EL TIPO EXACTO DE SEGURO en el mensaje. "
+                    f"Ejemplo: '...viabilidad para un seguro de vida...' o "
+                    f"'...viabilidad para un seguro de hogar...' "
                     f"Natural, generando confianza. "
                     f"No preguntes datos que ya tengamos del cliente. "
                     f"Máximo 180 caracteres. "
@@ -216,7 +235,7 @@ class OutboundService:
                         {
                             "role": "user",
                             "content": f"Genera un mensaje para {prospect.customer.nombre_completo} "
-                            f"sobre {prospect.recommended_product_type}",
+                            f"ofreciendo {product_label}. Menciona explícitamente el tipo de seguro.",
                         },
                     ],
                 )
@@ -227,15 +246,9 @@ class OutboundService:
 
         if not content:
             name = prospect.customer.nombre_completo or "cliente"
-            product_label = (
-                "un crédito"
-                if prospect.recommended_product_type == "credito"
-                else "un seguro"
-            )
             content = (
                 f"Hola {name}, soy Anna, tu asesora de Colsubsidio."
-                f" Revisamos tu perfil y encontramos viabilidad para la obtencion de un "
-                f"{product_label}."
+                f" Revisamos tu perfil y encontramos viabilidad para {product_label}."
                 f" Si te interesa, estaré atenta a cualquier indicacion que me des."
             )
 
