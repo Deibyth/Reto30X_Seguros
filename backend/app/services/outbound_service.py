@@ -1,5 +1,6 @@
 """OutboundService — proactive WhatsApp outreach for credit and insurance."""
 
+import hashlib
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -161,11 +162,11 @@ class OutboundService:
                 if estimated_payment > customer.salario * 0.5:
                     continue
 
-                product_type = "seguro"
+                # Si ya tiene una póliza activa, no contactar — es cliente existente
                 if customer.id in customers_with_policy:
-                    product_type = "credito"
-                    if customer.id in customers_with_credit:
-                        continue
+                    continue
+
+                product_type = "seguro"
 
                 if customer.id in customers_with_recent_notif:
                     continue
@@ -215,19 +216,23 @@ class OutboundService:
                     f"DEBES MENCIONAR EL TIPO EXACTO DE SEGURO en el mensaje. "
                     f"Ejemplo: '...viabilidad para un seguro de vida...' o "
                     f"'...viabilidad para un seguro de hogar...' "
-                    f"Natural, generando confianza. "
+                    f"Natural, cálido, con energía positiva. "
+                    f"Usa signos de admiración y emoción para transmitir calidez y entusiasmo. "
+                    f"Ejemplo: '¡Qué alegría saludarte!' o '¡Me encanta poder contarte esto!' "
                     f"No preguntes datos que ya tengamos del cliente. "
                     f"Máximo 180 caracteres. "
                     f"IMPORTANTE: El mensaje DEBE empezar con: "
-                    f"'Hola [nombre], soy Anna, tu asesora de Colsubsidio.' "
+                    f"'Hola [nombre], soy Anna, tu asesora de Colsubsidio. "
                     f"o una variacion natural similar que siempre incluya "
                     f"tu nombre y el de la persona. "
-                    f"Debe cerrar de forma amable, algo como: "
-                    f"'Si te interesa, estaré atenta a cualquier indicación que me des.' "
+                    f"Debe cerrar de forma amable y cálida, algo como: "
+                    f"'¡Si te interesa, aquí estoy para lo que necesites! 😊' "
                     f"No hagas preguntas directas de momento. "
                     f"NO incluyas 'STOP' ni 'responder STOP' ni 'darse de baja'. "
                     f"TONO: Usa SIEMPRE 'tú' (tuteo colombiano neutro). "
-                    f"NUNCA uses 'vos', 'contás', 'tenés' ni voseo."
+                    f"NUNCA uses 'vos', 'contás', 'tenés' ni voseo. "
+                    f"VARIEDAD: No repitas la misma estructura en cada mensaje. "
+                    f"Alterna las aperturas y cierres para que no suene a plantilla."
                 )
                 result = await self._ai_client.chat_raw(
                     openai_messages=[
@@ -247,9 +252,9 @@ class OutboundService:
         if not content:
             name = prospect.customer.nombre_completo or "cliente"
             content = (
-                f"Hola {name}, soy Anna, tu asesora de Colsubsidio."
-                f" Revisamos tu perfil y encontramos viabilidad para {product_label}."
-                f" Si te interesa, estaré atenta a cualquier indicacion que me des."
+                f"¡Hola {name}! Soy Anna, tu asesora de Colsubsidio."
+                f" ¡Revisamos tu perfil y encontramos viabilidad para {product_label}!"
+                f" Si te interesa, aquí estoy para lo que necesites. ¡Me encantaría ayudarte!"
             )
 
         return content
@@ -263,7 +268,15 @@ class OutboundService:
             try:
                 # Reemplazar "Anna" por "Ana" solo para el audio (TTS pronuncia natural)
                 tts_text = content.replace("Anna", "Ana")
-                audio_url = await self._tts_service.generate(tts_text)
+                # generate() returns URL str on success or None on failure (no exception)
+                result = await self._tts_service.generate(tts_text)
+                if result is not None:
+                    # Guardamos la URL que generate() devolvió — puede ser Cloudinary
+                    # o local /audio/{md5}.mp3. Es confiable porque el archivo existe
+                    # en el servidor cuando es local, o en Cloudinary cuando subió.
+                    audio_url = result
+                else:
+                    logger.warning("TTS returned None — no audio file was generated")
             except Exception:
                 logger.warning("TTS generation failed for outbound — continuing with text")
 
@@ -334,6 +347,10 @@ class OutboundService:
             return customer.antiguedad_meses >= 2
         if any(kw in contrato for kw in ("fijo", "temporal", "termino")):
             return customer.antiguedad_meses >= 6
+        # Contratos de prestación de servicios u obra/labor: requieren más
+        # antigüedad porque son de duración determinada
+        if any(kw in contrato for kw in ("prestacion", "servicios", "obra", "labor")):
+            return customer.antiguedad_meses >= 12
         return False
 
     @staticmethod

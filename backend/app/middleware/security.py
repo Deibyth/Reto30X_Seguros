@@ -51,9 +51,13 @@ class RateLimiter:
 
         Returns True if allowed, False if rate-limited.
         """
-        # Whitelist paths (health checks, etc.)
-        if request.url.path in self.whitelist_paths:
+        # Whitelist exact paths + prefix matches (health checks, outbound, etc.)
+        path = request.url.path
+        if path in self.whitelist_paths:
             return True
+        for whitelisted in self.whitelist_paths:
+            if whitelisted.endswith("*") and path.startswith(whitelisted.rstrip("*")):
+                return True
 
         client_ip = self._get_client_ip(request)
         now = time.time()
@@ -152,15 +156,17 @@ def add_security_middleware(
     app: FastAPI,
     environment: str = "development",
     chat_rate_limit_per_minute: int = 15,
+    whitelist_paths: set[str] | None = None,
 ) -> None:
     """Register security middleware on the FastAPI application.
 
     Called during ``create_app()`` with the detected environment.
     """
+    whitelist = whitelist_paths or {"/health"}
     rate_limiter = RateLimiter(
         max_requests=chat_rate_limit_per_minute,
         window_seconds=60,
-        whitelist_paths={"/health"},
+        whitelist_paths=whitelist,
     )
 
     app.add_middleware(

@@ -18,10 +18,12 @@ const RANGE_OPTIONS = [
   { label: "7 días", value: 7 },
   { label: "30 días", value: 30 },
   { label: "90 días", value: 90 },
+  { label: "1 año", value: 365 },
+  { label: "Todo", value: 0 },
 ] as const;
 
 export function TrendsPanel() {
-  const [days, setDays] = useState(30);
+  const [days, setDays] = useState(0);
   const { data, isLoading, error } = useQuery({
     queryKey: ["analytics", "trends", days],
     queryFn: () => fetchTrends(days),

@@ -34,7 +34,7 @@ class AnalyticsService:
             "SELECT "
             "  COUNT(*) as total, "
             "  SUM(CASE WHEN activa = 1 THEN 1 ELSE 0 END) as active, "
-            "  SUM(CASE WHEN estado_actual = 'completado' THEN 1 ELSE 0 END) as completed "
+            "  SUM(CASE WHEN estado_actual LIKE '%completado%' THEN 1 ELSE 0 END) as completed "
             "FROM sessions"
         )
         total_sessions = row[0] or 0 if row else 0
@@ -55,7 +55,7 @@ class AnalyticsService:
 
         conversion_rate = 0.0
         if total_sessions > 0:
-            conversion_rate = round(total_applications / total_sessions * 100, 2)
+            conversion_rate = round(completed_sessions / total_sessions * 100, 2)
 
         abandon_df = await self._fetch_df(
             "SELECT estado_actual, COUNT(*) as count FROM sessions "
@@ -79,18 +79,46 @@ class AnalyticsService:
             "abandon_at_section": abandon_at_section,
         }
 
-    async def get_daily_trends(self, days: int = 30) -> list[dict]:
-        df = await self._fetch_df(
-            "SELECT DATE(created_at) as date, "
-            "COUNT(*) as applications, "
-            "SUM(CASE WHEN estado = 'completada' THEN 1 ELSE 0 END) as completions "
+    async def get_daily_trends(self, days: int = 0) -> list[dict]:
+        where_clause = ""
+        if days > 0:
+            where_clause = f"WHERE created_at >= DATE('now', '-{days} days') "
+
+        apps_df = await self._fetch_df(
+            "SELECT DATE(created_at) as date, COUNT(*) as applications "
             "FROM applications "
-            f"WHERE created_at >= DATE('now', '-{days} days') "
+            f"{where_clause}"
             "GROUP BY DATE(created_at) ORDER BY date"
         )
-        if df.empty:
+
+        pol_where = ""
+        if days > 0:
+            pol_where = f"WHERE fecha_inicio >= DATE('now', '-{days} days') "
+        pol_df = await self._fetch_df(
+            "SELECT DATE(fecha_inicio) as date, COUNT(*) as completions "
+            "FROM policies "
+            f"{pol_where}"
+            "GROUP BY DATE(fecha_inicio) ORDER BY date"
+        )
+
+        if apps_df.empty and pol_df.empty:
             return []
-        return df.fillna(0).to_dict(orient="records")
+
+        combined: dict[str, dict] = {}
+        if not apps_df.empty:
+            for _, row in apps_df.iterrows():
+                d = str(row["date"])
+                combined[d] = {"date": d, "applications": int(row["applications"]), "completions": 0}
+        if not pol_df.empty:
+            for _, row in pol_df.iterrows():
+                d = str(row["date"])
+                if d in combined:
+                    combined[d]["completions"] = int(row["completions"])
+                else:
+                    combined[d] = {"date": d, "applications": 0, "completions": int(row["completions"])}
+
+        result = sorted(combined.values(), key=lambda x: x["date"])
+        return result
 
     async def get_customer_profile(self) -> dict:
         salary_df = await self._fetch_df(
@@ -199,7 +227,7 @@ class AnalyticsService:
             "  SELECT s.id, COUNT(c.id) as msg_count"
             "  FROM sessions s"
             "  JOIN conversations c ON c.session_id = s.id"
-            "  WHERE s.estado_actual = 'completado'"
+            "  WHERE s.estado_actual LIKE '%completado%'"
             "  GROUP BY s.id"
             ")"
         )
@@ -407,7 +435,7 @@ class AnalyticsService:
                 "ultima_intencion": _safe(row.get("ultima_intencion")),
                 "created_at": created_at.isoformat() if hasattr(created_at, "isoformat") else str(created_at) if created_at else "",
                 "updated_at": updated_at.isoformat() if hasattr(updated_at, "isoformat") else str(updated_at) if updated_at else "",
-                "conversations": session_convs[-5:],
+                "conversations": session_convs,
                 "total_messages": conv_counts.get(sid, 0),
                 "has_policy": cust_id in policy_customers if cust_id else False,
             })

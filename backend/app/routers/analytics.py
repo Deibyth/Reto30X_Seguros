@@ -44,7 +44,7 @@ async def pipeline_stats(request: Request) -> JSONResponse:
 @router.get("/trends")
 async def daily_trends(
     request: Request,
-    days: int = Query(30, ge=1, le=365),
+    days: int = Query(0, ge=0, le=730),
 ) -> JSONResponse:
     svc = _get_service(request)
     if svc is None:

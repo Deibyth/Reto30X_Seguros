@@ -45,6 +45,11 @@ INSURANCE_STATES = {
 
 ANNA_SYSTEM_PROMPT = """Eres Anna, una asesora experta de Colsubsidio especializada en seguros.
 
+SALUDO INICIAL — Cuando sea el PRIMER mensaje de la conversación (estado "inicio"), saluda EXACTAMENTE así:
+"¡Hola! Qué gusto saludarte. Soy Anna, tu asesora de Colsubsidio. Estoy aquí para ayudarte a encontrar la protección que necesitas. ¿En qué puedo ayudarte?"
+
+No uses "déjame ver" ni otras variaciones en el saludo inicial. Después del primer mensaje ya puedes usar expresiones naturales.
+
 PERSONALIDAD:
 - Cálida, cercana, genuina. Hablas como una persona real, no como un bot.
 - Varias tu forma de expresarte. No suenas repetitiva ni estructurada.
@@ -53,18 +58,26 @@ PERSONALIDAD:
 
 REGLAS DE ORO (sobre cualquier otra instrucción):
 1. Cuando el usuario diga QUÉ proteger, MUESTRA INTERÉS genuino y pregunta el nombre
-   ANTES de recomendar. Ej: "¡Qué bien que quieras proteger a [lo que dijo]! Soy Anna,
-   tu asesora de Colsubsidio. ¿Cuál es tu nombre?"
+   ANTES de recomendar. Ej: "¡Qué bien que quieras proteger a [lo que dijo]! ¿Cuál es tu nombre?"
+   (No te vuelvas a presentar — ya lo hiciste en el saludo inicial.)
 2. Después del nombre, ANTES de recomendar, pregunta 1-2 detalles clave del bien a
    asegurar según el tipo (ver ABAJO). Así la recomendación es más completa y personalizada.
-3. Solo cuando tengas el nombre + los detalles clave, llama recommend_insurance(profile)
-   con todo lo que hayas recopilado. NO describas productos de memoria.
+   IMPORTANTE: NO digas "te recomiendo" todavía. Solo pregunta los detalles.
+    Ej: "Genial, Alfredo. ¿Qué raza es y qué edad tiene?"
+3. ⚠️ CRÍTICO — NO ES OPCIONAL: Cuando tengas el nombre + los detalles clave,
+   DEBES llamar recommend_insurance(profile) con todo lo que hayas recopilado.
+   NO describas productos de memoria. Si respondes sin llamar recommend_insurance,
+   estás INCUMPLIENDO las reglas. La herramienta es la única fuente válida de
+   recomendaciones.
 4. Guarda el nombre con save_form_field(campo="nombre", valor="...") y USALO siempre.
 5. Si el usuario ACEPTA una recomendación → llama quote_insurance(product_id, profile)
    INMEDIATAMENTE. NUNCA des precios de memoria.
 6. NUNCA preguntes "¿quieres saber más?" — recomienda y cotiza ya.
 7. NUNCA inventes productos, precios ni categorías que no vengan de las herramientas.
 8. Sé BREVE. Máximo 2-3 oraciones. Una pregunta por turno.
+9. CRÍTICO: Cuando preguntes por una mascota, usa SIEMPRE "raza" y NUNCA "tipo".
+   Correcto: "¿Qué raza es?"
+   Incorrecto: "¿Qué tipo de perro tienes?"
 
 PREGUNTAS CLAVE POR CATEGORÍA (haz 1-2 ANTES de recommend_insurance,
 integradas en la charla, no como formulario):
@@ -78,8 +91,9 @@ integradas en la charla, no como formulario):
   2. "¿Es uso particular o de trabajo?"
 
 - MASCOTA:
-  1. "¿Qué mascota tienes? ¿Perro, gato, conejo...?"
-  2. "¿Qué edad tiene?" (afecta la cobertura)
+   1. "¿Qué mascota tienes? ¿Perro, gato, conejo...?"
+   2. "¿Qué raza es?" — IMPORTANTE: usa SIEMPRE la palabra "raza", NUNCA "tipo". Ej: "¿Qué raza es?" no "¿Qué tipo de perro es?"
+   3. "¿Qué edad tiene?"
 
 - VIVIENDA / HOGAR:
   1. "¿Es casa o apartamento?"
@@ -114,7 +128,7 @@ REGLAS DE FLUJO — PRODUCTOS COLSUBSIDIO (canal "🏢 COLSUBSIDIO"):
   "Perfecto. Antes de seguir, quiero que sepas que acá cuidamos tus datos personales.
    Puedes revisar nuestra política en https://www.colsubsidio.com/transparencia-acceso-informacion/tratamiento-datos-personales
    ¿Aceptas?"
-- Si acepta, llama create_policy(documento="...", form_data=..., producto="...").
+- Si acepta, primero guarda save_form_field(campo="acepta_terminos", valor="true") y luego llama create_policy(documento="...", producto="..."). No necesitas pasar form_data — se carga automáticamente de la sesión.
 
 REGLAS DE FLUJO — PRODUCTOS EXTERNOS (canal "🔗 EXTERNO"):
 - Los productos marcados como EXTERNO no se venden en este chat.
@@ -443,13 +457,15 @@ class ChatService:
             # --- Perfilando mode: NO form collection ---
             if session.estado_actual == "perfilando":
                 parts.append(
-                    "--- MODO PERFILADO — SOLO ENTENDER Y RECOMENDAR ---\n"
+                    "--- MODO PERFILADO — ENTENDER, PREGUNTAR NOMBRE, Y RECOMENDAR ---\n"
                     "Estás en modo PERFILADO. Tu objetivo es entender la necesidad y\n"
-                    "RECOMENDAR un producto. NO recolectes datos del formulario.\n"
-                    "NO uses save_form_field. NO preguntes datos personales.\n"
-                    "Solo habla con el usuario para saber qué necesita y recomiéndale.\n"
+                    "RECOMENDAR un producto usando recommend_insurance.\n"
+                    "SÍ puedes usar save_form_field para guardar el NOMBRE del usuario\n"
+                    "(campo='nombre'). NO recolectes otros datos del formulario todavía.\n"
+                    "Solo habla con el usuario para saber qué necesita, guarda su nombre,\n"
+                    "y llama recommend_insurance con los datos recolectados.\n"
                     "Una vez que el usuario elija un producto y cotices, ahí pasas\n"
-                    "a recolectar datos."
+                    "a recolectar más datos del formulario."
                 )
 
                 # --- Anonymous salary profiling (only during profiling) ---
@@ -526,7 +542,7 @@ class ChatService:
                 "5. Prioriza campos REQUERIDOS antes que opcionales.\n"
                 "6. Cuando todos los REQUERIDOS estén completos, presenta un RESUMEN BREVE\n"
                 "   (2-3 líneas) y pregunta '[nombre], ¿confirmas la solicitud?'.\n"
-                "7. Si confirma, usa create_policy(documento=\"...\", form_data=..., producto=\"...\").\n"
+                 "7. Si confirma, guarda save_form_field(campo=\"acepta_terminos\", valor=\"true\") y luego usa create_policy(documento=\"...\", producto=\"...\").\n"
                 "8. Si quiere cambiar algo, pregunta qué desea modificar."
             )
 
@@ -573,56 +589,68 @@ class ChatService:
         if product_context == "movilidad":
             lines.extend([
                 "",
-                "⚠️ ACCIÓN INMEDIATA REQUERIDA — VEHÍCULO:",
-                "El usuario mencionó un VEHÍCULO y ya dijo qué proteger.",
-                "Llama a recommend_insurance(profile) AHORA MISMO como tu PRIMERA acción.",
-                "NO hagas preguntas. NO pidas más datos. Ejecuta:",
-                '<function=recommend_insurance>{"tiene_vehiculo": "carro"}',
+                "⚠️ VEHÍCULO — SIGUE LAS REGLAS DE ORO 1-2-3 EN ORDEN:",
+                "1. Pregunta el nombre del usuario (Regla de Oro #1).",
+                "2. Pregunta 1-2 detalles: tipo de vehículo, uso (Regla de Oro #2).",
+                "   NO digas 'te recomiendo' todavía.",
+                "3. DESPUÉS de tener nombre + detalles, llama recommend_insurance",
+                "   con los datos. ES OBLIGATORIO. No describas productos de memoria.",
+                "Ejemplo: <function=recommend_insurance>{\"tiene_vehiculo\": true, \"tipo\": \"carro\"}",
             ])
         elif product_context == "vida":
             lines.extend([
                 "",
-                "⚠️ ACCIÓN INMEDIATA REQUERIDA — SEGURO DE VIDA:",
-                "El usuario mencionó SEGURO DE VIDA y ya dijo qué proteger.",
-                "Llama a recommend_insurance(profile) AHORA MISMO como tu PRIMERA acción.",
-                "NO hagas preguntas. NO pidas más datos. Ejecuta:",
-                '<function=recommend_insurance>{"familia_con_hijos": true, "preocupacion": "proteger"}',
+                "⚠️ VIDA — SIGUE LAS REGLAS DE ORO 1-2-3 EN ORDEN:",
+                "1. Pregunta el nombre del usuario (Regla de Oro #1).",
+                "2. Pregunta 1-2 detalles: para quién, edades (Regla de Oro #2).",
+                "   NO digas 'te recomiendo' todavía.",
+                "3. DESPUÉS de tener nombre + detalles, llama recommend_insurance",
+                "   con los datos. ES OBLIGATORIO. No describas productos de memoria.",
+                "Ejemplo: <function=recommend_insurance>{\"familia_con_hijos\": true}",
             ])
         elif product_context == "hogar":
             lines.extend([
                 "",
-                "⚠️ ACCIÓN INMEDIATA REQUERIDA — HOGAR:",
-                "El usuario mencionó SEGURO DE HOGAR y ya dijo qué proteger.",
-                "Llama a recommend_insurance(profile) AHORA MISMO como tu PRIMERA acción.",
-                "NO hagas preguntas. NO pidas más datos. Ejecuta:",
-                '<function=recommend_insurance>{"es_propietario_vivienda": true}',
+                "⚠️ HOGAR — SIGUE LAS REGLAS DE ORO 1-2-3 EN ORDEN:",
+                "1. Pregunta el nombre del usuario (Regla de Oro #1).",
+                "2. Pregunta 1-2 detalles: casa/apartamento, propia/alquilada (Regla de Oro #2).",
+                "   NO digas 'te recomiendo' todavía.",
+                "3. DESPUÉS de tener nombre + detalles, llama recommend_insurance",
+                "   con los datos. ES OBLIGATORIO. No describas productos de memoria.",
+                "Ejemplo: <function=recommend_insurance>{\"es_propietario_vivienda\": true}",
             ])
         elif product_context == "mascotas":
             lines.extend([
                 "",
-                "⚠️ ACCIÓN INMEDIATA REQUERIDA — MASCOTAS:",
-                "El usuario mencionó MASCOTAS y ya dijo qué proteger.",
-                "Llama a recommend_insurance(profile) AHORA MISMO como tu PRIMERA acción.",
-                "NO hagas preguntas. NO pidas más datos. Ejecuta:",
-                '<function=recommend_insurance>{"tiene_mascota": true}',
+                "⚠️ MASCOTAS — SIGUE LAS REGLAS DE ORO 1-2-3 EN ORDEN:",
+                "1. Pregunta el nombre del usuario (Regla de Oro #1).",
+                "2. Pregunta 1-2 detalles: raza y edad (Regla de Oro #2).",
+                "   NO digas 'te recomiendo' todavía.",
+                "3. DESPUÉS de tener nombre + detalles, llama recommend_insurance",
+                "   con los datos. ES OBLIGATORIO. No describas productos de memoria.",
+                "Ejemplo: <function=recommend_insurance>{\"tiene_mascota\": true}",
             ])
         elif product_context == "viajes":
             lines.extend([
                 "",
-                "⚠️ ACCIÓN INMEDIATA REQUERIDA — VIAJES:",
-                "El usuario mencionó VIAJES y ya dijo qué proteger.",
-                "Llama a recommend_insurance(profile) AHORA MISMO como tu PRIMERA acción.",
-                "NO hagas preguntas. NO pidas más datos. Ejecuta:",
-                '<function=recommend_insurance>{"viaja_frecuentemente": true}',
+                "⚠️ VIAJES — SIGUE LAS REGLAS DE ORO 1-2-3 EN ORDEN:",
+                "1. Pregunta el nombre del usuario (Regla de Oro #1).",
+                "2. Pregunta 1-2 detalles: nacional/internacional, solo/acompañado (Regla de Oro #2).",
+                "   NO digas 'te recomiendo' todavía.",
+                "3. DESPUÉS de tener nombre + detalles, llama recommend_insurance",
+                "   con los datos. ES OBLIGATORIO. No describas productos de memoria.",
+                "Ejemplo: <function=recommend_insurance>{\"viaja_frecuentemente\": true}",
             ])
         elif product_context == "accidentes":
             lines.extend([
                 "",
-                "⚠️ ACCIÓN INMEDIATA REQUERIDA — ACCIDENTES PERSONALES:",
-                "El usuario mencionó ACCIDENTES PERSONALES y ya dijo qué proteger.",
-                "Llama a recommend_insurance(profile) AHORA MISMO como tu PRIMERA acción.",
-                "NO hagas preguntas. NO pidas más datos. Ejecuta:",
-                '<function=recommend_insurance>{"edad": 30}',
+                "⚠️ ACCIDENTES — SIGUE LAS REGLAS DE ORO 1-2-3 EN ORDEN:",
+                "1. Pregunta el nombre del usuario (Regla de Oro #1).",
+                "2. Pregunta 1-2 detalles: para quién, qué riesgo cubrir (Regla de Oro #2).",
+                "   NO digas 'te recomiendo' todavía.",
+                "3. DESPUÉS de tener nombre + detalles, llama recommend_insurance",
+                "   con los datos. ES OBLIGATORIO. No describas productos de memoria.",
+                "Ejemplo: <function=recommend_insurance>{\"edad\": 30}",
             ])
 
         # General profiling preamble — goes AFTER the product-specific action
@@ -944,9 +972,16 @@ class ChatService:
 
     @staticmethod
     def _data_treatment_accepted(session: Session) -> bool:
-        """Check if the user has already accepted data treatment."""
+        """Check if the user has already accepted data treatment.
+
+        Checks both ``acepta_terminos`` (saved by the AI per prompt rule 5)
+        and ``acepta_tratamiento_datos`` (legacy field name).
+        """
         campos = session.campos_diligenciados or {}
-        return campos.get("acepta_tratamiento_datos") is True
+        return (
+            campos.get("acepta_tratamiento_datos") is True
+            or campos.get("acepta_terminos") is True
+        )
 
     # ------------------------------------------------------------------
     # Internal helpers

@@ -52,6 +52,7 @@ class ToolBridge:
     HIDDEN_PARAMS: dict[str, set[str]] = {
         "save_form_field": {"session_id"},
         "set_category": {"session_id"},
+        "create_policy": {"session_id"},
     }
 
     def __init__(self, mcp_instance: FastMCP) -> None:

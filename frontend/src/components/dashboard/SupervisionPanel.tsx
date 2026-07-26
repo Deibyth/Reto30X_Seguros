@@ -31,8 +31,8 @@ function ConversationModal({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-xl border bg-card shadow-xl animate-fade-in">
-        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+      <div className="flex h-full max-h-[85vh] w-full max-w-lg flex-col rounded-xl border bg-card shadow-xl animate-fade-in">
+        <div className="flex shrink-0 items-center justify-between border-b border-border px-5 py-4">
           <div>
             <h3 className="text-sm font-semibold text-foreground">
               Conversación — {session.customer_name || "Anónimo"}
@@ -49,7 +49,7 @@ function ConversationModal({
           </button>
         </div>
 
-        <div className="flex-1 space-y-3 overflow-y-auto p-5">
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-5">
           {session.conversations.length === 0 && (
             <p className="py-8 text-center text-sm text-muted-foreground">
               No hay mensajes en esta sesión.

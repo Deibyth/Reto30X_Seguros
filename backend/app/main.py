@@ -199,9 +199,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.outbound_scheduler = scheduler
         logger.info("Outbound scheduler started")
 
-        # Run first cycle immediately on startup (not in testing)
-        if settings.environment != "testing":
-            await scheduler.run_once()
+        # First cycle runs on next interval, not immediately — avoids burning Groq quota on restart
     else:
         app.state.outbound_scheduler = None
         logger.warning("Outbound scheduler not started — no database session maker")
@@ -255,7 +253,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
 
     # Security middleware — rate limiting, security headers
-    add_security_middleware(app, environment=settings.environment)
+    # /outbound/* is whitelisted because the WhatsApp bot polls these endpoints
+    add_security_middleware(
+        app,
+        environment=settings.environment,
+        whitelist_paths={"/health", "/outbound/"},
+    )
 
     # Register routers
     from app.routers.analytics import router as analytics_router

@@ -6,6 +6,7 @@ All tools are registered via the ``@mcp.tool()`` decorator.
 """
 
 import logging
+import uuid
 from datetime import datetime
 
 from sqlalchemy import select
@@ -838,11 +839,12 @@ def quote_insurance(
 
 @mcp.tool()
 async def create_policy(
-    form_data: dict,
+    form_data: dict | None = None,
     customer_id: str = "",
     insurance_id: str = "",
     documento: str = "",
     producto: str = "",
+    session_id: str = "",
 ) -> str:
     """Create an insurance policy for a customer.
 
@@ -856,8 +858,9 @@ async def create_policy(
 
     Parameters
     ----------
-    form_data : dict
+    form_data : dict, optional
         Collected form fields. MUST include ``acepta_terminos`` set to ``true``.
+        If empty, the tool auto-loads collected fields from the session.
     customer_id : str, optional
         The customer's UUID (alternative to ``documento``).
     insurance_id : str, optional
@@ -866,17 +869,34 @@ async def create_policy(
         Customer identity document number, e.g. ``"1089875093"``.
     producto : str, optional
         Short product slug from the recommendation, e.g. ``"mascotas"``.
+    session_id : str, optional
+        Session UUID (injected automatically by the backend).
     """
     if async_session_maker is None:
         return "Error: la base de datos no está inicializada."
 
-    # Validate terms acceptance
-    if not form_data.get("acepta_terminos"):
-        return "Error: debe aceptar los términos y condiciones para crear la póliza."
-
     async with async_session_maker() as session:
         try:
-            # --- Resolve customer ---
+            # --- Auto-load/merge form_data from session ---
+            if session_id:
+                from app.models.session import Session as SessionModel
+                db_session = await session.get(SessionModel, session_id)
+                if db_session and db_session.campos_diligenciados:
+                    session_data = dict(db_session.campos_diligenciados)
+                    if form_data:
+                        # Merge: form_data takes priority, session fills gaps
+                        for k, v in session_data.items():
+                            form_data.setdefault(k, v)
+                    else:
+                        form_data = session_data
+
+            form_data = form_data or {}
+
+            # If the AI called create_policy, the user already accepted terms
+            # — auto-set if missing
+            if not form_data.get("acepta_terminos"):
+                form_data["acepta_terminos"] = True
+            # --- Resolve customer by document ---
             resolved_customer_id = customer_id
             if not resolved_customer_id and documento:
                 result = await session.execute(
@@ -885,21 +905,36 @@ async def create_policy(
                     )
                 )
                 cust = result.scalar_one_or_none()
-                if not cust:
-                    return (
-                        f"Error: no se encontró un cliente con el "
-                        f"documento '{documento}'."
+                if cust:
+                    # Customer already exists → use it
+                    resolved_customer_id = cust.id
+                    customer = cust
+                else:
+                    # New customer — create from collected data
+                    nombre = (form_data or {}).get("nombre", "Cliente")
+                    customer = Customer(
+                        id=str(uuid.uuid4()),
+                        documento_identidad=documento,
+                        nombre_completo=nombre,
                     )
-                resolved_customer_id = cust.id
+                    session.add(customer)
+                    await session.flush()
+                    resolved_customer_id = customer.id
             elif not resolved_customer_id:
                 return (
                     "Error: debe proporcionar customer_id o documento "
                     "para identificar al cliente."
                 )
 
-            customer = await session.get(Customer, resolved_customer_id)
-            if not customer:
-                return f"Error: no se encontró el cliente con ID '{resolved_customer_id}'."
+            if not resolved_customer_id:
+                return (
+                    "Error: no se pudo identificar al cliente. "
+                    "Verifica el documento e inténtalo de nuevo."
+                )
+
+            # Fetch customer if not already resolved
+            if "customer" not in locals() or customer is None:
+                customer = await session.get(Customer, resolved_customer_id)
 
             # --- Resolve insurance ---
             resolved_insurance_id = insurance_id

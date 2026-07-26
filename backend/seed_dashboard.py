@@ -355,7 +355,11 @@ async def seed_dashboard():
                     sess = Session(
                         id=str(uuid.uuid4()),
                         customer_id=customer.id,
-                        estado_actual=random.choice(["perfilando", "recomendando", "cotizando", "recopilando_datos_seguro", "completado_seguro"]),
+                        estado_actual=random.choices(
+                        ["perfilando", "recomendando", "cotizando", "recopilando_datos_seguro", "completado_seguro"],
+                        weights=[3, 4, 5, 5, 83],
+                        k=1
+                    )[0],
                         activa=random.random() < 0.2,  # 20% active
                         insurance_profile={"product_context": random.choice(list(ins_by_cat.keys()))},
                         campos_diligenciados={},
@@ -368,7 +372,7 @@ async def seed_dashboard():
                 
                 # Create conversations for each session
                 for sess in sessions[-num_sessions:]:
-                    num_msgs = random.randint(4, 12)
+                    num_msgs = random.randint(20, 50)
                     for j in range(num_msgs):
                         if j % 2 == 0:
                             # User message
