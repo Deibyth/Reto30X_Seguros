@@ -93,3 +93,44 @@ def complete(db: Connection, claim: Claim, *, success: bool, now: int, retryable
     db.execute("UPDATE work_items SET status=?, available_at=?, lease_owner=NULL, lease_token=NULL, lease_expires_at=NULL WHERE id=? AND lease_token=?", (status, now + delay, claim.work_id, claim.token))
     db.execute("UPDATE delivery_attempts SET status=? WHERE work_id=? AND attempt=?", ("succeeded" if success else status, claim.work_id, claim.attempt))
     return Completion(status)
+
+
+def cancel_claim(db: Connection, claim: Claim) -> Completion:
+    db.execute("SAVEPOINT cancel_claim")
+    try:
+        updated = db.execute("UPDATE work_items SET status='cancelled', lease_owner=NULL, lease_token=NULL, lease_expires_at=NULL WHERE id=? AND lease_token=? AND status IN ('claimed','cancelled')", (claim.work_id, claim.token)).rowcount
+        if updated:
+            db.execute("UPDATE delivery_attempts SET status='cancelled' WHERE work_id=? AND attempt=?", (claim.work_id, claim.attempt))
+    except Exception:
+        db.execute("ROLLBACK TO cancel_claim")
+        db.execute("RELEASE cancel_claim")
+        raise
+    else:
+        db.execute("RELEASE cancel_claim")
+    return Completion("cancelled")
+
+
+def deliver_external_webhook(db: Connection, claim: Claim, config, transport=None, resolve=None, *, now: int) -> Completion:
+    """Send a claimed canonical message only while its ownership fence survives."""
+    row = db.execute("SELECT m.id,m.chat_id,m.content FROM work_items w JOIN messages m ON m.id=w.message_id WHERE w.id=?", (claim.work_id,)).fetchone()
+    if not row:
+        return cancel_claim(db, claim)
+    from app.integrations.webhook import build_delivery, concrete_https_transport
+    try:
+        delivery = build_delivery(claim.work_id, row[1], row[0], row[2], config.secret, now, config.url, config.allowed_hosts, resolve)
+        live = db.execute("""SELECT 1 FROM work_items w JOIN messages m ON m.id=w.message_id JOIN chats c ON c.id=m.chat_id
+            WHERE w.id=? AND w.kind='external_webhook' AND w.route='external_webhook' AND w.config_version=?
+            AND w.status='claimed' AND w.lease_token=? AND w.lease_expires_at>? AND c.owner_id IS NULL
+            AND w.owner_version=c.owner_version""", (claim.work_id, config.version, claim.token, now)).fetchone()
+        if not live:
+            return cancel_claim(db, claim)
+        response = (transport or concrete_https_transport)(delivery, connect_address=delivery.destination.address, tls_server_name=delivery.destination.sni,
+                             connect_timeout=2, total_timeout=10, max_response_bytes=16384, allow_redirects=False)
+        if len(response.body) > 16384:
+            raise ValueError("webhook response exceeds bound")
+        success, retryable = delivery.classify(response)
+    except (OSError, TimeoutError):
+        success, retryable = False, True
+    except ValueError:
+        success, retryable = False, False
+    return complete(db, claim, success=success, retryable=retryable, now=now)
