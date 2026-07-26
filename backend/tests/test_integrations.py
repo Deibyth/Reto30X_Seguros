@@ -15,12 +15,14 @@ from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
 from app.integrations.replies import ReplyDenied, enqueue_reply
+from app.integrations.telegram import TelegramConfig, TelegramResponse, accept_telegram
 from app.integrations.webhook import Destination, Delivery, Response, WebhookConfig, build_delivery, concrete_https_transport, validate_destination, verify_signature
 from app.config import Settings
 from app.main import create_app
 from app.migrations import migrate
 from app.multichannel.handoff import take_over
 from app.multichannel.worker import WorkerCoordinator, claim_next, deliver_external_webhook
+from app.multichannel.worker import deliver_telegram
 from app.database import get_db
 from app.routers.integrations import ReplyBody, router
 from app.security_api_keys import KeyResult
@@ -293,3 +295,49 @@ def test_concrete_transport_pins_tcp_ip_and_verifies_sni_certificate(tmp_path):
         concrete_https_transport(delivery, connect_address="127.0.0.1", tls_server_name=hostname, ca_certs=str(certificate))
     thread.join(timeout=1)
     assert seen == {"sni": hostname, "http": 0}
+
+
+def test_telegram_ingress_authenticates_text_and_deduplicates_updates(database):
+    config = TelegramConfig("conn", "secret", "token")
+    update = {"update_id": 7, "message": {"chat": {"id": 99, "first_name": "Ada"}, "text": "hello"}}
+    with sqlite3.connect(database) as db:
+        first = accept_telegram(db, config, "secret", update)
+        assert accept_telegram(db, config, "secret", update) == first
+        assert db.execute("SELECT direction,content FROM messages").fetchall() == [("inbound", "hello")]
+        with pytest.raises(PermissionError):
+            accept_telegram(db, config, "wrong", update)
+
+
+def test_telegram_worker_sends_canonical_text_and_maps_provider_status(database):
+    config = TelegramConfig("conn", "secret", "token")
+    with sqlite3.connect(database) as db:
+        reply = enqueue_reply(db, "key-a", "chat", "hello", "key")
+        WorkerCoordinator(db, "worker").acquire(now=1)
+        claim = claim_next(db, "worker", now=1)
+        sent = []
+        result = deliver_telegram(db, claim, config, lambda destination, text, token: sent.append((destination, text, token)) or TelegramResponse(200, "telegram:1"), now=2)
+        assert result.status == "succeeded" and sent == [("provider-id", "hello", "token")]
+        assert db.execute("SELECT status FROM work_items WHERE message_id=?", (reply["id"],)).fetchone() == ("succeeded",)
+        assert db.execute("SELECT status,provider_receipt FROM delivery_attempts WHERE work_id=?", (claim.work_id,)).fetchone() == ("succeeded", "telegram:1")
+        for status, expected in ((429, "retry_wait"), (500, "retry_wait"), (400, "dead"), (403, "dead")):
+            enqueue_reply(db, "key-a", "chat", str(status), str(status))
+            claim = claim_next(db, "worker", now=2)
+            assert deliver_telegram(db, claim, config, lambda *_args: TelegramResponse(status, "discarded"), now=3).status == expected
+            assert db.execute("SELECT status,provider_receipt FROM delivery_attempts WHERE work_id=?", (claim.work_id,)).fetchone() == (expected, None)
+            if expected == "retry_wait":
+                db.execute("UPDATE work_items SET status='dead' WHERE id=?", (claim.work_id,))
+
+
+def test_telegram_route_requires_secret_and_reports_safe_health(database):
+    app = FastAPI()
+    app.state.telegram_config = TelegramConfig("conn", "secret", "token")
+    app.include_router(router)
+    session = type("Session", (), {"bind": type("Bind", (), {"url": type("Url", (), {"database": str(database)})()})()})()
+    app.dependency_overrides[get_db] = lambda: session
+    update = {"update_id": 8, "message": {"chat": {"id": 100}, "text": "hola"}}
+    with TestClient(app) as client:
+        denied = client.post("/api/integrations/telegram", json=update)
+        accepted = client.post("/api/integrations/telegram", headers={"X-Telegram-Bot-Api-Secret-Token": "secret"}, json=update)
+        unsupported = client.post("/api/integrations/telegram", headers={"X-Telegram-Bot-Api-Secret-Token": "secret"}, json={"update_id": 9, "message": {"chat": {"id": 100}}})
+        assert (denied.status_code, accepted.status_code, unsupported.status_code) == (401, 202, 415)
+        assert client.get("/api/integrations/telegram/health").json() == {"status": "ready"}

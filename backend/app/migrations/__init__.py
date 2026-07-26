@@ -76,6 +76,7 @@ CREATE TABLE worker_leases (
  owner TEXT PRIMARY KEY, lease_token TEXT NOT NULL, expires_at INTEGER NOT NULL
 );"""
 MIGRATIONS[5] = WORKER_SQL
+MIGRATIONS[6] = "ALTER TABLE delivery_attempts ADD COLUMN provider_receipt TEXT"
 
 
 class MigrationTargetError(RuntimeError):

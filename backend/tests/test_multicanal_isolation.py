@@ -100,7 +100,7 @@ def test_versioned_migration_only_touches_isolated_database(databases):
     target = root / DATABASE
 
     dry_run = migrate("multicanal", target, root, IDENTITY, dry_run=True)
-    assert dry_run == {"target": str(target), "pending": [1, 2, 3, 4, 5], "applied": []}
+    assert dry_run == {"target": str(target), "pending": [1, 2, 3, 4, 5, 6], "applied": []}
     assert not target.exists()
 
     result = migrate("multicanal", target, root, IDENTITY)
@@ -109,8 +109,9 @@ def test_versioned_migration_only_touches_isolated_database(databases):
         row = connection.execute(
             "SELECT version, deployment_id FROM multicanal_schema_migrations"
         ).fetchone()
-    assert result["applied"] == [1, 2, 3, 4, 5]
+    assert result["applied"] == [1, 2, 3, 4, 5, 6]
     assert replay["applied"] == []
+    assert "provider_receipt" in {row[1] for row in sqlite3.connect(target).execute("PRAGMA table_info(delivery_attempts)")}
     assert row == (1, IDENTITY)
     assert snapshot(original) == before
 
@@ -161,7 +162,7 @@ def test_interrupted_security_migration_rolls_back_and_replays(databases, monkey
     assert applied == ((1,),)
 
     monkeypatch.undo()
-    assert migrate("multicanal", target, root, IDENTITY)["applied"] == [2, 3, 4, 5]
+    assert migrate("multicanal", target, root, IDENTITY)["applied"] == [2, 3, 4, 5, 6]
     assert migrate("multicanal", target, root, IDENTITY)["applied"] == []
 
 

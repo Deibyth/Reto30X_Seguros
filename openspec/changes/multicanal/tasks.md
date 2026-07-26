@@ -48,7 +48,8 @@ Each slice is RED → GREEN → REFACTOR in one session, includes tests and evid
 - [x] **S6b correction:** Dispatch admits only claimed `external_webhook` route work with its accepted configuration snapshot, revalidates claim/lease/ownership before send, and requires pinned-IP TLS/SNI transport parameters.
 - [x] **S6b concrete transport correction:** Default production delivery connects only to the validated pinned IP while TLS verifies the original hostname; injected transports remain test seams.
 
-- [ ] **S7 Telegram adapter (250).** Authenticated text ingress/send/health and provider-stub tests. Base: S6b.
+- [x] **S7 Telegram adapter (250).** Authenticated text ingress/send/health and provider-stub tests. Base: S6b.
+- [x] **S7 correction:** Persist Telegram receipts only for successful 2xx sends; migration 6 remains replay-safe.
 - [ ] **S8 Baileys sidecar foundation (350).** Authenticated Node sidecar, protected state, health, and Compose tests. Base: S7.
 - [ ] **S9 CRM API (390).** Cursor reads and idempotent contact/customer/stage/closer/owner mutations. Base: S8.
 - [ ] **S10 Frontend test/auth foundation (260).** Vitest harness and protected navigation. Base: S9.

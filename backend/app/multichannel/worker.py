@@ -79,7 +79,7 @@ def recover_expired(db: Connection, now: int) -> int:
     ).rowcount
 
 
-def complete(db: Connection, claim: Claim, *, success: bool, now: int, retryable: bool = False) -> Completion:
+def complete(db: Connection, claim: Claim, *, success: bool, now: int, retryable: bool = False, receipt: str | None = None) -> Completion:
     row = db.execute("SELECT lease_expires_at, attempt_count FROM work_items WHERE id=? AND lease_token=? AND status='claimed'", (claim.work_id, claim.token)).fetchone()
     if not row or row[0] <= now:
         raise StaleClaim("claim no longer owns the work item")
@@ -91,7 +91,7 @@ def complete(db: Connection, claim: Claim, *, success: bool, now: int, retryable
         status = "dead"
     delay = min(900, 5 * (2 ** max(claim.attempt - 1, 0))) if status == "retry_wait" else 0
     db.execute("UPDATE work_items SET status=?, available_at=?, lease_owner=NULL, lease_token=NULL, lease_expires_at=NULL WHERE id=? AND lease_token=?", (status, now + delay, claim.work_id, claim.token))
-    db.execute("UPDATE delivery_attempts SET status=? WHERE work_id=? AND attempt=?", ("succeeded" if success else status, claim.work_id, claim.attempt))
+    db.execute("UPDATE delivery_attempts SET status=?, provider_receipt=? WHERE work_id=? AND attempt=?", ("succeeded" if success else status, receipt if success else None, claim.work_id, claim.attempt))
     return Completion(status)
 
 
@@ -134,3 +134,14 @@ def deliver_external_webhook(db: Connection, claim: Claim, config, transport=Non
     except ValueError:
         success, retryable = False, False
     return complete(db, claim, success=success, retryable=retryable, now=now)
+
+
+def deliver_telegram(db: Connection, claim: Claim, config, sender, *, now: int) -> Completion:
+    """Send one claimed canonical outbound message through the Telegram seam."""
+    row = db.execute("""SELECT i.provider_user_id,m.content FROM work_items w JOIN messages m ON m.id=w.message_id
+        JOIN chats c ON c.id=m.chat_id JOIN channel_identities i ON i.id=c.identity_id JOIN channel_connections x ON x.id=i.connection_id
+        WHERE w.id=? AND w.kind='outbound' AND w.status='claimed' AND w.lease_token=? AND x.id=? AND x.channel='telegram'""", (claim.work_id, claim.token, config.connection_id)).fetchone()
+    if not row:
+        return cancel_claim(db, claim)
+    response = sender(row[0], row[1], config.token)
+    return complete(db, claim, success=200 <= response.status < 300, retryable=response.retryable, receipt=response.receipt, now=now)

@@ -9,7 +9,8 @@
 - [x] S5 — Worker, routing, and handoff
 - [x] S6a — Canonical reply boundary
 - [x] S6b — External webhook delivery dispatcher
-- [ ] S7–S14 — Not started
+- [x] S7 — Telegram adapter
+- [ ] S8–S14 — Not started
 
 ## S1 evidence
 
@@ -269,3 +270,41 @@ S1–S6b are complete. S7–S14 remain pending. S6b is limited to external-webho
 | Task | Test file | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
 |---|---|---|---|---|---|---|---|
 | Concrete pinned HTTPS transport | `backend/tests/test_integrations.py` | Runtime TLS integration | 18 passed | missing concrete transport import | 1 passed | trusted matching certificate and trusted mismatched certificate | minimal urllib3 adapter/default seam; 19 passed |
+
+## S7 evidence — Telegram adapter
+
+| Evidence | Result |
+|---|---|
+| Mode | Strict TDD in disposable Python 3.12 `python:3.12-slim` |
+| Safety net | `tests/test_integrations.py` → 20 passed |
+| RED | Telegram adapter import failed: `ModuleNotFoundError: app.integrations.telegram` |
+| GREEN / triangulation | Focused `tests/test_integrations.py` → 23 passed: secret denial, text-only `415`, update deduplication, canonical inbound persistence, provider-stub success, and throttle-to-retry mapping |
+| Runtime harness | FastAPI TestClient webhook returned `401` missing secret, `202` authenticated text, `415` non-text; health returned safe `{"status":"ready"}` without exposing credentials |
+| Combined regression | S1–S6b + S7 targeted suite → 65 passed, 2 existing SQLAlchemy UTC deprecation warnings |
+| Full-suite note | `tests -x -q` stopped at a pre-existing `/chat` test: FastMCP lacks `list_tools`, returning `503`; S7 focused and targeted regressions passed |
+| Rollback | Revert only `integrations/telegram.py`, Telegram route/worker seam, S7 tests, and tracking entries; retain S1–S6b and original `/chat` |
+| Cleanup | Docker runs used `--rm`; no credentials, persistent containers, volumes, networks, stage, commit, push, PR, lifecycle, or SDD-attempt command |
+
+### S7 TDD cycle evidence
+
+| Task | Test file | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|---|---|---|---|---|---|---|---|
+| S7 | `backend/tests/test_integrations.py` | FastAPI/integration + provider stub | 20 passed | missing Telegram module | 23 passed | bad secret, non-text, duplicate update, 2xx, 429 | compact adapter/config injection seam; 65 targeted passed |
+
+## S7 status
+
+S1–S7 are complete. S8–S14 remain pending. Telegram configuration is an injected secret-safe seam; persistent Settings credential management remains deferred to S11.
+
+## S7 correction — Telegram receipts and errors
+
+| Evidence | Result |
+|---|---|
+| TDD | RED: 3 failures (missing receipt/migration 6); GREEN: 3 passed; refactor: 39 selected regressions passed. |
+| Focused/runtime | Disposable Python 3.12 Docker: Telegram provider stub and isolated SQLite migration replay → 39 passed. |
+| Behavior | 2xx atomically persists receipt with success; 429/500 retry and 400/403 dead retain no receipt. |
+| Rollback | Revert migration 6, Telegram receipt completion, tests, and this entry only. |
+
+### S7 correction TDD cycle evidence
+| Task | Test file | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|---|---|---|---|---|---|---|---|
+| Receipt/error correction | `test_integrations.py`, migration tests | Integration | 23 passed | 3 failed | 3 passed | 2xx, 429/500, 400/403, replay | 39 passed |

@@ -2,13 +2,14 @@
 
 import sqlite3
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.integrations.replies import ReplyDenied, enqueue_reply, reply_status
+from app.integrations.telegram import accept_telegram, health
 from app.security_api_keys import KeyResult, require_api_key
 
 router = APIRouter(prefix="/api/integrations", tags=["integrations"])
@@ -53,3 +54,22 @@ async def get_reply(message_id: str, db: AsyncSession = Depends(get_db),
             return reply_status(connection, actor.key_id, message_id)
     except LookupError:
         raise HTTPException(404, "Reply not found") from None
+
+
+@router.post("/telegram", status_code=202)
+async def post_telegram(request: Request, body: dict, secret: str | None = Header(None, alias="X-Telegram-Bot-Api-Secret-Token"), db: AsyncSession = Depends(get_db)):
+    config = getattr(request.app.state, "telegram_config", None)
+    if config is None:
+        raise HTTPException(503, "Telegram is unavailable")
+    try:
+        with _connection(db) as connection:
+            return accept_telegram(connection, config, secret, body)
+    except PermissionError:
+        raise HTTPException(401, "Telegram authentication failed") from None
+    except ValueError:
+        raise HTTPException(415, "Telegram text updates only") from None
+
+
+@router.get("/telegram/health")
+async def telegram_health(request: Request):
+    return health(getattr(request.app.state, "telegram_config", None))
