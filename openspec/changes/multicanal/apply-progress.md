@@ -7,7 +7,8 @@
 - [x] S3 — API keys and encrypted vault
 - [x] S4 — Canonical ledger
 - [x] S5 — Worker, routing, and handoff
-- [ ] S6–S14 — Not started
+- [x] S6a — Canonical reply boundary
+- [ ] S6b–S14 — Not started
 
 ## S1 evidence
 
@@ -166,3 +167,44 @@ S1, S2, S3, S4, and S5 are checked complete. S6–S14 remain pending. Residual r
 ## S5 status
 
 S1, S2, S3, S4, and S5 are checked complete. S6–S14 remain pending. Residual risks: provider transports, HTTP APIs, CRM, UI, retention execution, and operational bridge remain intentionally deferred.
+
+## S6a evidence — canonical reply boundary
+
+| Evidence | Result |
+|---|---|
+| Mode | Strict TDD, Python 3.12 in disposable `python:3.12-slim` |
+| RED | `tests/test_integrations.py` collection failed: `ModuleNotFoundError: app.integrations.replies` |
+| GREEN/refactor | Focused command → 5 passed in 0.64s |
+| Combined regression | S6a + S1–S5 + legacy routers → 47 passed, 2 existing datetime warnings |
+| Runtime harness | FastAPI `TestClient` against isolated migrated SQLite: POST returns 202, matching replay 200, GET canonical status `queued` |
+| Boundary | API-key dependency requires `messages:reply`; body forbids provider IDs; caller scope fences idempotency; human takeover cancels queued work and blocks enqueue |
+| Changed paths | `backend/app/{integrations/replies.py,routers/integrations.py,main.py}`, `backend/tests/test_integrations.py`, tasks/progress |
+| Rollback | Revert only S6a files/registration/tests and this evidence; retain S1–S5, original `/chat`, database, and volume |
+| Cleanup | Every Python 3.12 run used `docker run --rm`; no container, volume, network, original storage, stage, commit, push, PR, or lifecycle command was created |
+
+## S6a TDD cycle evidence
+
+| Task | Test file | Layer | Safety net | RED | GREEN | TRIANGULATE | REFACTOR |
+|---|---|---|---|---|---|---|---|
+| 6a.1–6a.3 | `backend/tests/test_integrations.py` | Integration | S1–S5: 15 passed | missing replies module | 5 passed | replay/conflict/caller scope, takeover, body rejection, HTTP 202/200/status, profile gate | compact canonical boundary; 47 combined passed |
+
+## S6a status
+
+Only S6a is complete. S6b webhook transport/dispatcher and all later slices remain explicitly out of scope.
+
+## S6a boundary-coverage follow-up
+
+| Evidence | Result |
+|---|---|
+| RED | New three-case command → 2 passed, 1 failed: same-transaction takeover rolled back with the rejected request rather than representing a committed concurrent ownership change. |
+| GREEN | Same command after the deterministic second-connection racer → 3 passed; focused `test_integrations.py` → 8 passed. |
+| Combined regression | S1–S6a focused backend suite → 50 passed, 2 existing SQLAlchemy datetime warnings. |
+| Runtime harness | FastAPI `TestClient` with isolated migrated SQLite proved 401 missing key and 403 insufficient `crm:read` key before message/work creation; unknown-chat 404 without provider disclosure or records; cross-caller status 404; committed ownership race 403 with no records. |
+| Cleanup | All Python 3.12 Docker runs used `--rm`; no persistent container, volume, network, stage, commit, push, PR, lifecycle, webhook, worker, transport, or provider work was created. |
+| Rollback boundary | Revert only the three coverage cases and this evidence entry; existing S6a reply code and S1–S5 stay unchanged. |
+
+### S6a follow-up TDD cycle evidence
+
+| Task | Test file | Layer | Safety net | RED | GREEN | TRIANGULATE | REFACTOR |
+|---|---|---|---|---|---|---|---|
+| Boundary coverage | `backend/tests/test_integrations.py` | Integration | 5 passed | committed-race harness failure | 8 focused passed | missing/insufficient auth, unknown/cross-caller, ownership fence | concurrent SQLite racer; 50 combined passed |

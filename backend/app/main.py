@@ -277,6 +277,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(outbound_router)
     app.include_router(auth_router)
     app.include_router(boundary_router)
+    if settings.app_profile == "multicanal":
+        from app.routers.integrations import router as integrations_router
+        app.include_router(integrations_router)
 
     # Serve cached TTS audio files
     audio_static_dir = os.path.join(

@@ -1,0 +1,1 @@
+"""Multichannel integration boundaries."""
