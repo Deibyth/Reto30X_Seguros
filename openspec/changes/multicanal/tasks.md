@@ -42,9 +42,11 @@ Each slice is RED → GREEN → REFACTOR in one session, includes tests and evid
 
 ### Phase 2: S6b — Signed External Webhook Delivery (340)
 
-- [ ] **6b.1 RED:** Extend `backend/tests/test_integrations.py` for canonical HMAC payload/replay window, ignored `2xx` body, HTTPS/allowlist/public-DNS/port/size/redirect/rebind rejection, bounded transport, retryable/permanent classification, dead-letter retry integration, and ownership change immediately before send.
-- [ ] **6b.2 GREEN:** Add `backend/app/integrations/webhook.py` and worker-owned `external_webhook` dispatch wiring. Deliver claimed work asynchronously with stable delivery ID/timestamp, pinned TLS/SNI destination, 2s connect/10s total/16KiB bounds, no redirects, `retry_wait`/dead-letter outcomes, and pre-send ownership/version fencing.
-- [ ] **6b.3 REFACTOR:** Keep response bodies non-authoritative and external delivery out of ingress/reply routes; record fake-network/runtime and rollback evidence. Base: S6a; trace: outbound API, messaging retry/dead letter, handoff.
+- [x] **6b.1 RED:** Extend `backend/tests/test_integrations.py` for canonical HMAC payload/replay window, ignored `2xx` body, HTTPS/allowlist/public-DNS/port/size/redirect/rebind rejection, bounded transport, retryable/permanent classification, dead-letter retry integration, and ownership change immediately before send.
+- [x] **6b.2 GREEN:** Add `backend/app/integrations/webhook.py` and worker-owned `external_webhook` dispatch wiring. Deliver claimed work asynchronously with stable delivery ID/timestamp, pinned TLS/SNI destination, 2s connect/10s total/16KiB bounds, no redirects, `retry_wait`/dead-letter outcomes, and pre-send ownership/version fencing.
+- [x] **6b.3 REFACTOR:** Keep response bodies non-authoritative and external delivery out of ingress/reply routes; record fake-network/runtime and rollback evidence. Base: S6a; trace: outbound API, messaging retry/dead letter, handoff.
+- [x] **S6b correction:** Dispatch admits only claimed `external_webhook` route work with its accepted configuration snapshot, revalidates claim/lease/ownership before send, and requires pinned-IP TLS/SNI transport parameters.
+- [x] **S6b concrete transport correction:** Default production delivery connects only to the validated pinned IP while TLS verifies the original hostname; injected transports remain test seams.
 
 - [ ] **S7 Telegram adapter (250).** Authenticated text ingress/send/health and provider-stub tests. Base: S6b.
 - [ ] **S8 Baileys sidecar foundation (350).** Authenticated Node sidecar, protected state, health, and Compose tests. Base: S7.

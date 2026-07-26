@@ -8,7 +8,8 @@
 - [x] S4 — Canonical ledger
 - [x] S5 — Worker, routing, and handoff
 - [x] S6a — Canonical reply boundary
-- [ ] S6b–S14 — Not started
+- [x] S6b — External webhook delivery dispatcher
+- [ ] S7–S14 — Not started
 
 ## S1 evidence
 
@@ -192,6 +193,29 @@ S1, S2, S3, S4, and S5 are checked complete. S6–S14 remain pending. Residual r
 
 Only S6a is complete. S6b webhook transport/dispatcher and all later slices remain explicitly out of scope.
 
+## S6b evidence — external webhook delivery dispatcher
+
+| Evidence | Result |
+|---|---|
+| Mode | Strict TDD, Python 3.12 in disposable `python:3.12-slim` |
+| RED | Focused `tests/test_integrations.py` failed collection: `ModuleNotFoundError: app.integrations.webhook`; replay-verification extension then failed import for `verify_signature`. |
+| GREEN | Focused Python 3.12 command passed: 17 tests in 1.16s. |
+| Combined regression | S1–S6b focused backend suite passed: 59 tests in 6.80s, with 2 existing SQLAlchemy UTC deprecation warnings. |
+| Fake-network runtime | Fake resolver/transport proved canonical HMAC bytes, five-minute verification window, HTTPS allowlist/public-DNS/443/URL-size/rebind rejection, pinned IP/SNI handoff, redirect/body non-authority, 2s/10s/16KiB/no-redirect bounds, retry wait, dead letter, and pre-send ownership suppression. |
+| Scope boundary | No ingress route, provider adapter, UI, or reply API behavior changed. The dispatcher accepts a claimed work item and injected transport only. |
+| Rollback | Revert only `integrations/webhook.py`, worker webhook dispatch, webhook integration tests, and these task/progress entries; retain S1–S6a and original runtime/storage. |
+| Cleanup | Python 3.12 containers used `--rm`; no container, volume, network, stage, commit, push, PR, lifecycle, or SDD-attempt command was created. |
+
+### S6b TDD cycle evidence
+
+| Task | Test file | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|---|---|---|---|---|---|---|---|
+| 6b.1–6b.3 | `backend/tests/test_integrations.py` | Unit/integration fake-network | S6a: 8 passed | missing webhook module; then missing replay verifier | 17 focused passed | signature window, rejection matrix, 2xx/retry/permanent/redirect, retry-to-dead, ownership race | compact pure delivery/config seam; 59 combined passed |
+
+## S6b status
+
+S1–S6b are complete. S7–S14 remain pending. S6b is limited to external-webhook delivery primitives and worker dispatch; it does not expose webhook configuration or a provider route.
+
 ## S6a boundary-coverage follow-up
 
 | Evidence | Result |
@@ -208,3 +232,40 @@ Only S6a is complete. S6b webhook transport/dispatcher and all later slices rema
 | Task | Test file | Layer | Safety net | RED | GREEN | TRIANGULATE | REFACTOR |
 |---|---|---|---|---|---|---|---|
 | Boundary coverage | `backend/tests/test_integrations.py` | Integration | 5 passed | committed-race harness failure | 8 focused passed | missing/insufficient auth, unknown/cross-caller, ownership fence | concurrent SQLite racer; 50 combined passed |
+
+## S6b bounded correction — S6b-critical-dispatch-correction
+
+| Evidence | Result |
+|---|---|
+| Mode | Strict TDD in disposable Python 3.12 `python:3.12-slim` |
+| Safety net | Existing `test_integrations.py` → 17 passed |
+| RED | New snapshot/pinned-transport test → 1 failed: `WebhookConfig` had no accepted version |
+| GREEN | Focused `test_integrations.py` → 18 passed in 1.16s |
+| Combined regression | S1–S6b targeted suite → 60 passed in 7.70s; 2 existing SQLAlchemy UTC deprecation warnings |
+| Runtime harness | SQLite claim plus fake resolver/transport proves wrong route/config, stale token, and expired lease never send; admitted work reaches the resolved `8.8.8.8` only with `hooks.example.com` TLS SNI |
+| Rollback | Revert only the S6b webhook config/dispatch/test correction and these tracking entries; S6a/API/ingress remain unchanged |
+
+### S6b correction TDD cycle evidence
+
+| Task | Test file | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|---|---|---|---|---|---|---|---|
+| Dispatch admission and pinned transport | `backend/tests/test_integrations.py` | Unit/integration fake-network | 17 passed | missing config version | 18 passed | snapshot denial, stale token, expired lease, pinned-IP/SNI success | compact query/transport boundary; 60 combined passed |
+
+## S6b concrete pinned HTTPS transport — S6b-concrete-pinned-transport
+
+| Evidence | Result |
+|---|---|
+| Mode | Strict TDD in disposable Python 3.12 `python:3.12-slim` |
+| Safety net | Existing `test_integrations.py` → 18 passed |
+| RED | Concrete transport import failed before implementation |
+| GREEN | Local TLS listener test → 1 passed; full integration file → 19 passed |
+| Runtime harness | TCP reached only `127.0.0.1`; SNI and certificate hostname were `hooks.example.com`; a `wrong.example.com` certificate failed before HTTP was accepted |
+| Transport | urllib3 uses IP pool host, `server_hostname`/`assert_hostname`/Host original hostname, `CERT_REQUIRED`, no redirects/retries, and 2s/10s/16KiB bounds |
+| Rollback | Revert the concrete transport/default wiring, direct dependency, TLS harness, and this entry; preserve injected transport tests and all prior S6b work |
+| Cleanup | All runs used `docker run --rm`; local listener threads closed their sockets; no lifecycle, stage, commit, push, or PR action occurred |
+
+### S6b concrete transport TDD cycle evidence
+
+| Task | Test file | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|---|---|---|---|---|---|---|---|
+| Concrete pinned HTTPS transport | `backend/tests/test_integrations.py` | Runtime TLS integration | 18 passed | missing concrete transport import | 1 passed | trusted matching certificate and trusted mismatched certificate | minimal urllib3 adapter/default seam; 19 passed |
