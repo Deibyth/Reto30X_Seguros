@@ -6,20 +6,19 @@
   <i>「 Anna, tu asesora experta en seguros 」</i>
 </p>
 
-<p align="center">
+<div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 4px;">
   <img src="https://img.shields.io/badge/Python-3.14+-3776AB?style=for-the-badge&logo=python&logoColor=white">
   <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white">
   <img src="https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=white">
   <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white">
   <img src="https://img.shields.io/badge/Vite-6-646CFF?style=for-the-badge&logo=vite&logoColor=white">
   <img src="https://img.shields.io/badge/TailwindCSS-3.4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white">
-  <br>
   <img src="https://img.shields.io/badge/SQLAlchemy-2.0-D71F00?style=for-the-badge&logo=sqlalchemy&logoColor=white">
   <img src="https://img.shields.io/badge/Groq-llama3.3--70b-FF6600?style=for-the-badge&logo=groq&logoColor=white">
   <img src="https://img.shields.io/badge/FastMCP-Protocol-000000?style=for-the-badge&logo=modelcontextprotocol&logoColor=white">
   <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white">
   <img src="https://img.shields.io/badge/pytest-8.0-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white">
-</p>
+</div>
 
 <p align="center">
   <b>🚫 Solo seguros.</b> Este sistema no gestiona créditos. Dominio exclusivo de protección:
